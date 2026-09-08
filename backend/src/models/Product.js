@@ -41,10 +41,6 @@ const productSchema = new mongoose.Schema(
       }
     ],
 
-    image: {
-      type: String,
-      default: ''
-    },
     // Toggle false when out of stock so attendants cannot select it
     isAvailable: {
       type: Boolean,

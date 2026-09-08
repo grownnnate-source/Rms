@@ -39,7 +39,6 @@ const initialProducts = [
     category: 'Ice Cream',
     description: 'Classic rich and creamy Madagascar vanilla bean ice cream',
     price: 250,
-    image: '/products/vanilla.jpg',
     isAvailable: true,
     sizes: []
   },
@@ -48,7 +47,6 @@ const initialProducts = [
     category: 'Ice Cream',
     description: 'Deep, decadent chocolate crafted with premium Belgian cocoa',
     price: 280,
-    image: '/products/chocolate.jpg',
     isAvailable: true,
     sizes: []
   },
@@ -57,7 +55,6 @@ const initialProducts = [
     category: 'Ice Cream',
     description: 'Refreshing sweet cream swirled with real sun-ripened strawberry puree',
     price: 250,
-    image: '/products/strawberry.jpg',
     isAvailable: true,
     sizes: []
   },
@@ -66,7 +63,6 @@ const initialProducts = [
     category: 'Ice Cream',
     description: 'Tropical blend of ripe Ethiopian mangoes and tangy passionfruit',
     price: 260,
-    image: '/products/mango.jpg',
     isAvailable: true,
     sizes: []
   },
@@ -75,7 +71,6 @@ const initialProducts = [
     category: 'Ice Cream',
     description: 'Cool garden mint infused ice cream studded with dark chocolate flakes',
     price: 270,
-    image: '/products/mint.jpg',
     isAvailable: true,
     sizes: []
   },
@@ -84,7 +79,6 @@ const initialProducts = [
     category: 'Ice Cream',
     description: 'Golden buttery caramel blended with sea salt and sweet cream',
     price: 280,
-    image: '/products/caramel.jpg',
     isAvailable: true,
     sizes: []
   },
@@ -101,7 +95,6 @@ const initialProducts = [
       { size: 'L', price: 50 },
       { size: 'XL', price: 70 }
     ],
-    image: '/products/cup.jpg',
     isAvailable: true
   },
 
@@ -112,7 +105,6 @@ const initialProducts = [
     description: 'Freshly baked, crunchy golden waffle cone',
     price: 50,
     sizes: [],
-    image: '/products/cone.jpg',
     isAvailable: true
   },
 
@@ -123,7 +115,6 @@ const initialProducts = [
     description: 'Crunchy chocolate cookie crumbs with cream filling',
     price: 40,
     sizes: [],
-    image: '/products/oreo.jpg',
     isAvailable: true
   },
   {
@@ -132,7 +123,6 @@ const initialProducts = [
     description: 'Vibrant festive sugar sprinkles',
     price: 40,
     sizes: [],
-    image: '/products/sprinkles.jpg',
     isAvailable: true
   },
   {
@@ -141,7 +131,6 @@ const initialProducts = [
     description: 'Semi-sweet dark chocolate morsels',
     price: 40,
     sizes: [],
-    image: '/products/chocochips.jpg',
     isAvailable: true
   },
   {
@@ -150,7 +139,6 @@ const initialProducts = [
     description: 'Crispy colorful candy-coated chocolate gems',
     price: 40,
     sizes: [],
-    image: '/products/mms.jpg',
     isAvailable: true
   },
   {
@@ -159,7 +147,6 @@ const initialProducts = [
     description: 'Roasted and lightly salted crushed peanuts',
     price: 40,
     sizes: [],
-    image: '/products/peanuts.jpg',
     isAvailable: true
   }
 ];
