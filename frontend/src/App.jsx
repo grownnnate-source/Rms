@@ -69,7 +69,8 @@ function normalizeProduct(p) {
     iconName: p.iconName || getIconForProduct(p.name, cat),
     colorAccent: p.colorAccent || getColorAccentForProduct(p.name, cat),
     badge: p.badge || (Number(p.price) >= 270 ? "Bestseller" : ""),
-    scoopsDefault: p.scoopsDefault || 1
+    scoopsDefault: p.scoopsDefault || 1,
+    sizes: Array.isArray(p.sizes) ? p.sizes : []
   };
 }
 

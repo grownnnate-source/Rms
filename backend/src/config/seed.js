@@ -98,12 +98,12 @@ const initialProducts = [
     isAvailable: true
   },
 
-  // 3. Cones
+  // 3. Cones (Included free / 0 ETB)
   {
     name: 'Regular Waffle Cone',
     category: 'Cones',
-    description: 'Freshly baked, crunchy golden waffle cone',
-    price: 50,
+    description: 'Freshly baked, crunchy golden waffle cone (Included free)',
+    price: 0,
     sizes: [],
     isAvailable: true
   },

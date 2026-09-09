@@ -48,10 +48,53 @@ export const HomePage = ({
   const subtotal = currentOrderItems.reduce((acc, item) => acc + item.totalItemPrice, 0);
   const tax = Math.round(subtotal * 0.05);
   const total = subtotal + tax;
+
+  const handleAddCupWithSize = (product, cupSizeObj) => {
+    if (!product.available) return;
+    const price = Number(cupSizeObj.price) || 0;
+    const newItem = {
+      id: createQuickItemId(`${product.id}-${cupSizeObj.size}`),
+      productId: product.id,
+      name: `${product.name} (${cupSizeObj.size.toUpperCase()})`,
+      category: product.category,
+      scoops: 0,
+      serving: `Paper Cup (${cupSizeObj.size.toUpperCase()})`,
+      containerType: "Cup",
+      cupSize: cupSizeObj.size,
+      toppings: [],
+      unitPrice: price,
+      quantity: 1,
+      totalItemPrice: price
+    };
+    onAddToCart(newItem);
+  };
+
   const handleProductCardClick = (product) => {
     if (!product.available) return;
     if (product.category === "ice_cream") {
       setActiveCustomizingProduct(product);
+    } else if (product.category === "cups") {
+      const defaultSize = product.sizes && product.sizes.length > 0
+        ? product.sizes[0]
+        : { size: "sm", price: 20 };
+      handleAddCupWithSize(product, defaultSize);
+    } else if (product.category === "cones") {
+      // Cone does NOT have a price: 0 ETB
+      const newItem = {
+        id: createQuickItemId(product.id),
+        productId: product.id,
+        name: product.name,
+        category: product.category,
+        scoops: 0,
+        serving: "Regular Waffle Cone",
+        containerType: "Cone",
+        cupSize: "",
+        toppings: [],
+        unitPrice: 0,
+        quantity: 1,
+        totalItemPrice: 0
+      };
+      onAddToCart(newItem);
     } else {
       const newItem = {
         id: createQuickItemId(product.id),
@@ -59,11 +102,11 @@ export const HomePage = ({
         name: product.name,
         category: product.category,
         scoops: 0,
-        serving: product.category === "cups" ? "Cup" : product.category === "cones" ? "Cone" : "Cup",
+        serving: "Standard",
         toppings: [],
-        unitPrice: product.price,
+        unitPrice: Number(product.price) || 0,
         quantity: 1,
-        totalItemPrice: product.price
+        totalItemPrice: Number(product.price) || 0
       };
       onAddToCart(newItem);
     }
@@ -226,6 +269,41 @@ export const HomePage = ({
                     <p className="text-xs text-[#78716C] line-clamp-2 mt-1">
                       {product.description}
                     </p>
+
+                    {/* Exact user requirement: "and the cup sizes should be just under the cup component" */}
+                    {product.category === "cups" && (
+                      <div className="mt-2.5 pt-2.5 border-t border-dashed border-[#5A3E36]/15">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-[#5A3E36] mb-1.5">
+                          <span>Cup Sizes:</span>
+                          <span className="text-[10px] text-[#78716C]">Tap size to add</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {(product.sizes && product.sizes.length > 0
+                            ? product.sizes
+                            : [
+                                { size: "sm", price: 20 },
+                                { size: "md", price: 35 },
+                                { size: "L", price: 50 },
+                                { size: "XL", price: 70 }
+                              ]
+                          ).map((sz) => (
+                            <button
+                              key={sz.size}
+                              type="button"
+                              disabled={!product.available}
+                              onClick={() => handleAddCupWithSize(product, sz)}
+                              className="px-2 py-1.5 rounded-lg bg-[#FFF9F2] hover:bg-[#E85D75] text-[#5A3E36] hover:text-white border border-[#5A3E36]/15 hover:border-[#E85D75] transition-all flex items-center justify-between text-xs cursor-pointer shadow-2xs group/btn disabled:opacity-40"
+                              title={`Add ${sz.size.toUpperCase()} cup (${sz.price} ETB)`}
+                            >
+                              <span className="font-bold uppercase text-[11px]">{sz.size}</span>
+                              <span className="font-bold text-[11px] text-[#E85D75] group-hover/btn:text-white">
+                                {sz.price} ETB
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {
@@ -233,20 +311,51 @@ export const HomePage = ({
     }
                   <div className="flex items-center justify-between pt-2 border-t border-[#5A3E36]/5 mt-auto">
                     <div>
-                      <span className="text-base font-black text-[#5A3E36]">
-                        {product.price}
-                      </span>
-                      <span className="text-xs font-semibold text-[#E85D75] ml-1">ETB</span>
+                      {product.category === "cones" ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-base font-black text-[#65A30D]">FREE</span>
+                          <span className="text-[11px] font-semibold text-[#78716C]">(0 ETB)</span>
+                        </div>
+                      ) : product.category === "cups" ? (
+                        <div>
+                          <span className="text-[11px] text-[#78716C]">From</span>{" "}
+                          <span className="text-base font-black text-[#5A3E36]">20</span>
+                          <span className="text-xs font-semibold text-[#E85D75] ml-1">ETB</span>
+                        </div>
+                      ) : isIceCream ? (
+                        <div>
+                          <span className="text-base font-black text-[#5A3E36]">
+                            {product.price}
+                          </span>
+                          <span className="text-xs font-semibold text-[#E85D75] ml-1">ETB</span>
+                          <span className="text-[10px] text-[#78716C] ml-0.5">/ scoop</span>
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="text-base font-black text-[#5A3E36]">
+                            {product.price}
+                          </span>
+                          <span className="text-xs font-semibold text-[#E85D75] ml-1">ETB</span>
+                        </div>
+                      )}
                     </div>
 
                     <button
-      type="button"
-      disabled={!product.available}
-      onClick={() => handleProductCardClick(product)}
-      className="px-3 py-1.5 rounded-xl bg-[#FFF9F2] hover:bg-[#E85D75] text-[#5A3E36] hover:text-white font-bold text-xs border border-[#5A3E36]/15 hover:border-[#E85D75] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
-    >
+                      type="button"
+                      disabled={!product.available}
+                      onClick={() => handleProductCardClick(product)}
+                      className="px-3 py-1.5 rounded-xl bg-[#FFF9F2] hover:bg-[#E85D75] text-[#5A3E36] hover:text-white font-bold text-xs border border-[#5A3E36]/15 hover:border-[#E85D75] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
+                    >
                       <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>{isIceCream ? "Customize" : "Add"}</span>
+                      <span>
+                        {isIceCream
+                          ? "Customize"
+                          : product.category === "cones"
+                          ? "Add (Free)"
+                          : product.category === "cups"
+                          ? "Add (sm)"
+                          : "Add"}
+                      </span>
                     </button>
                   </div>
                 </div>;

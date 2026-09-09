@@ -165,7 +165,7 @@ export const ReceiptModal = ({ order, onClose }) => {
             <div className="space-y-1 border-b border-dashed border-stone-400 pb-3 text-[10px]">
               <div className="flex justify-between">
                 <span>PAYMENT METHOD:</span>
-                <span className="font-bold">{order.paymentMethod.replace("_", " ")}</span>
+                <span className="font-bold">{(order.paymentMethod || "CHAPA_QR").replace("_", " ")}</span>
               </div>
               <div className="flex justify-between">
                 <span>PAYMENT STATUS:</span>
