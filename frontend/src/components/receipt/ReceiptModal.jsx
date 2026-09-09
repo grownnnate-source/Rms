@@ -1,83 +1,79 @@
-import React from 'react';
-import { Order } from '../../types';
-import { Printer, X, CheckCircle2, Download, Copy, Share2 } from 'lucide-react';
-
-interface ReceiptModalProps {
-  order: Order;
-  onClose: () => void;
-}
-
-export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) => {
+import React from "react";
+import { Printer, X, Copy } from "lucide-react";
+export const ReceiptModal = ({ order, onClose }) => {
   const handlePrint = () => {
     window.print();
   };
-
   const [copied, setCopied] = React.useState(false);
-
   const handleCopyText = () => {
     const textLines = [
-      '================================',
-      '     CAMPUS SCOOP GELATO        ',
-      '  University Student Center L1  ',
-      '   Tel: +251 91 122 3344        ',
-      '================================',
+      "================================",
+      "     CAMPUS SCOOP GELATO        ",
+      "  University Student Center L1  ",
+      "   Tel: +251 91 122 3344        ",
+      "================================",
       `Order #: #${order.orderNumber}`,
       `Date: ${order.createdAt}`,
       `Server: ${order.serverName}`,
-      `Cashier: ${order.cashierName || 'Dawit K.'}`,
-      '--------------------------------',
+      `Cashier: ${order.cashierName || "Dawit K."}`,
+      "--------------------------------",
       ...order.items.map(
         (i) => `${i.name} (x${i.quantity}) - ${i.totalItemPrice} ETB`
       ),
-      '--------------------------------',
+      "--------------------------------",
       `Subtotal: ${order.subtotal} ETB`,
       `Campus Tax: ${order.tax} ETB`,
       `TOTAL: ${order.total} ETB`,
       `STATUS: ${order.status}`,
       `CHAPA REF: ${order.chapaTxRef}`,
-      '================================',
-      'Thank you for your sweet visit! ',
-      '================================',
-    ].join('\n');
-
+      "================================",
+      "Thank you for your sweet visit! ",
+      "================================"
+    ].join("\n");
     navigator.clipboard?.writeText(textLines);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 2e3);
   };
-
-  return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-[#5A3E36]/15 overflow-hidden flex flex-col max-h-[95vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Modal Top Bar */}
+  return <div
+    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+    onClick={onClose}
+  >
+      <div
+    className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-[#5A3E36]/15 overflow-hidden flex flex-col max-h-[95vh]"
+    onClick={(e) => e.stopPropagation()}
+  >
+        {
+    /* Modal Top Bar */
+  }
         <div className="no-print flex items-center justify-between px-5 py-3.5 border-b border-stone-200 bg-[#FFF9F2]">
           <div className="flex items-center gap-2">
             <Printer className="w-4 h-4 text-[#5A3E36]" />
             <h3 className="font-bold text-sm text-[#5A3E36]">Printable Receipt Slip</h3>
           </div>
           <button
-            type="button"
-            onClick={onClose}
-            className="w-7 h-7 rounded-full flex items-center justify-center text-stone-500 hover:text-[#5A3E36] hover:bg-stone-200 cursor-pointer"
-          >
+    type="button"
+    onClick={onClose}
+    className="w-7 h-7 rounded-full flex items-center justify-center text-stone-500 hover:text-[#5A3E36] hover:bg-stone-200 cursor-pointer"
+  >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Scrollable Receipt Preview */}
+        {
+    /* Scrollable Receipt Preview */
+  }
         <div className="p-6 overflow-y-auto bg-stone-100 flex justify-center">
           
-          {/* Authentic Thermal Receipt Paper */}
-          <div 
-            id="printable-receipt"
-            className="w-full max-w-[340px] bg-white p-6 shadow-sm border border-stone-300 font-mono-receipt text-xs text-stone-900 rounded-sm space-y-3 leading-relaxed"
-          >
-            {/* Header */}
+          {
+    /* Authentic Thermal Receipt Paper */
+  }
+          <div
+    id="printable-receipt"
+    className="w-full max-w-[340px] bg-white p-6 shadow-sm border border-stone-300 font-mono-receipt text-xs text-stone-900 rounded-sm space-y-3 leading-relaxed"
+  >
+            {
+    /* Header */
+  }
             <div className="text-center pb-3 border-b border-dashed border-stone-400 space-y-1">
               <h2 className="font-bold text-sm tracking-wider text-black">
                 CAMPUS SCOOP GELATO
@@ -93,7 +89,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
               </div>
             </div>
 
-            {/* Order Meta */}
+            {
+    /* Order Meta */
+  }
             <div className="text-[11px] space-y-0.5 border-b border-dashed border-stone-400 pb-2">
               <div className="flex justify-between">
                 <span>ORDER #:</span>
@@ -109,19 +107,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
               </div>
               <div className="flex justify-between">
                 <span>CASHIER:</span>
-                <span>{order.cashierName || 'Dawit K.'}</span>
+                <span>{order.cashierName || "Dawit K."}</span>
               </div>
             </div>
 
-            {/* Itemized list */}
+            {
+    /* Itemized list */
+  }
             <div className="space-y-2 border-b border-dashed border-stone-400 pb-3">
               <div className="flex justify-between font-bold text-[10px] text-stone-600 uppercase border-b border-stone-200 pb-1">
                 <span>Item / Details</span>
                 <span>Amount</span>
               </div>
 
-              {order.items.map((item, idx) => (
-                <div key={idx} className="space-y-0.5">
+              {order.items.map((item, idx) => <div key={idx} className="space-y-0.5">
                   <div className="flex justify-between font-medium text-black">
                     <span>
                       {item.quantity}x {item.name}
@@ -129,21 +128,22 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
                     <span>{item.totalItemPrice} ETB</span>
                   </div>
 
-                  {/* Options sub-line */}
+                  {
+    /* Options sub-line */
+  }
                   <div className="text-[10px] text-stone-600 pl-3">
-                    {item.scoops > 0 && `${item.scoops} scoop(s) • `}
+                    {item.scoops > 0 && `${item.scoops} scoop(s) \u2022 `}
                     {item.serving}
-                    {item.toppings.length > 0 && (
-                      <span className="text-stone-500">
-                        {' '}+ {item.toppings.join(', ')}
-                      </span>
-                    )}
+                    {item.toppings.length > 0 && <span className="text-stone-500">
+                        {" "}+ {item.toppings.join(", ")}
+                      </span>}
                   </div>
-                </div>
-              ))}
+                </div>)}
             </div>
 
-            {/* Totals */}
+            {
+    /* Totals */
+  }
             <div className="space-y-1 border-b border-dashed border-stone-400 pb-3 text-[11px]">
               <div className="flex justify-between text-stone-600">
                 <span>SUBTOTAL:</span>
@@ -159,11 +159,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
               </div>
             </div>
 
-            {/* Payment & Chapa Details */}
+            {
+    /* Payment & Chapa Details */
+  }
             <div className="space-y-1 border-b border-dashed border-stone-400 pb-3 text-[10px]">
               <div className="flex justify-between">
                 <span>PAYMENT METHOD:</span>
-                <span className="font-bold">{order.paymentMethod.replace('_', ' ')}</span>
+                <span className="font-bold">{order.paymentMethod.replace("_", " ")}</span>
               </div>
               <div className="flex justify-between">
                 <span>PAYMENT STATUS:</span>
@@ -175,20 +177,24 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
                 <span>CHAPA REF:</span>
                 <span className="font-mono text-[9px]">{order.chapaTxRef}</span>
               </div>
-              {order.paidAt && (
-                <div className="flex justify-between text-stone-500">
+              {order.paidAt && <div className="flex justify-between text-stone-500">
                   <span>CLEARED AT:</span>
                   <span>{order.paidAt}</span>
-                </div>
-              )}
+                </div>}
             </div>
 
-            {/* Receipt Footer & Barcode Simulation */}
+            {
+    /* Receipt Footer & Barcode Simulation */
+  }
             <div className="text-center pt-2 space-y-2">
-              {/* Clean SVG Barcode */}
+              {
+    /* Clean SVG Barcode */
+  }
               <div className="flex justify-center py-1">
                 <svg className="w-48 h-10" viewBox="0 0 160 30">
-                  {/* barcode stripes */}
+                  {
+    /* barcode stripes */
+  }
                   <rect x="0" y="0" width="2" height="26" fill="#000" />
                   <rect x="4" y="0" width="1" height="26" fill="#000" />
                   <rect x="7" y="0" width="3" height="26" fill="#000" />
@@ -237,31 +243,33 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
 
         </div>
 
-        {/* Modal Actions */}
+        {
+    /* Modal Actions */
+  }
         <div className="no-print p-4 border-t border-stone-200 bg-white flex items-center justify-between gap-3">
           <button
-            type="button"
-            onClick={handleCopyText}
-            className="px-3 py-2 text-xs font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
+    type="button"
+    onClick={handleCopyText}
+    className="px-3 py-2 text-xs font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
+  >
             <Copy className="w-3.5 h-3.5" />
-            <span>{copied ? 'Copied!' : 'Copy Text'}</span>
+            <span>{copied ? "Copied!" : "Copy Text"}</span>
           </button>
 
           <div className="flex items-center gap-2">
             <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 border border-stone-300 rounded-xl cursor-pointer"
-            >
+    type="button"
+    onClick={onClose}
+    className="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900 border border-stone-300 rounded-xl cursor-pointer"
+  >
               Close
             </button>
             <button
-              id="print-thermal-receipt-btn"
-              type="button"
-              onClick={handlePrint}
-              className="px-5 py-2 text-xs font-bold text-white bg-[#5A3E36] hover:bg-[#47302a] rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-            >
+    id="print-thermal-receipt-btn"
+    type="button"
+    onClick={handlePrint}
+    className="px-5 py-2 text-xs font-bold text-white bg-[#5A3E36] hover:bg-[#47302a] rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+  >
               <Printer className="w-4 h-4" />
               <span>Print Thermal Slip</span>
             </button>
@@ -269,6 +277,5 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ order, onClose }) =>
         </div>
 
       </div>
-    </div>
-  );
+    </div>;
 };

@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   IceCream, 
   Coffee, 
@@ -13,16 +12,8 @@ import {
   Droplet, 
   CircleDot 
 } from 'lucide-react';
-import { ProductCategory } from '../../types';
 
-interface ProductIconProps {
-  iconName?: string;
-  category: ProductCategory;
-  colorAccent?: string;
-  className?: string;
-}
-
-export const ProductIcon: React.FC<ProductIconProps> = ({ 
+export const ProductIcon = ({ 
   iconName, 
   category, 
   colorAccent = '#5A3E36', 

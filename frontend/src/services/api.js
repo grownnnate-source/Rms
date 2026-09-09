@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
@@ -22,7 +22,7 @@ api.interceptors.request.use((config) => {
 });
 
 // Socket.IO singleton instance
-export const socket: Socket = io(SOCKET_URL, {
+export const socket = io(SOCKET_URL, {
   autoConnect: true,
   reconnection: true,
   reconnectionAttempts: 5,
@@ -30,7 +30,7 @@ export const socket: Socket = io(SOCKET_URL, {
 });
 
 // Authentication
-export async function loginWithPin(pin: string, role?: string) {
+export async function loginWithPin(pin, role) {
   const res = await api.post('/auth/pin-login', { pin, role });
   if (res.data.token) {
     localStorage.setItem('rms_jwt_token', res.data.token);
@@ -45,76 +45,76 @@ export async function fetchCurrentStaff() {
 }
 
 // Products
-export async function fetchProducts(category?: string) {
+export async function fetchProducts(category) {
   const params = category && category !== 'all' ? { category } : {};
   const res = await api.get('/products', { params });
   return res.data.products;
 }
 
-export async function toggleProductAvailability(productId: string, isAvailable?: boolean) {
+export async function toggleProductAvailability(productId, isAvailable) {
   const res = await api.patch(`/products/${productId}/availability`, { isAvailable });
   return res.data.product;
 }
 
-export async function createProduct(productData: any) {
+export async function createProduct(productData) {
   const res = await api.post('/products', productData);
   return res.data.product;
 }
 
 // Orders
-export async function createOrder(items: any[]) {
+export async function createOrder(items) {
   const res = await api.post('/orders', { items });
   return res.data.order;
 }
 
-export async function fetchOrders(status?: string) {
+export async function fetchOrders(status) {
   const params = status ? { status } : {};
   const res = await api.get('/orders', { params });
   return res.data.orders;
 }
 
-export async function updateOrderStatus(orderId: string, status: string) {
+export async function updateOrderStatus(orderId, status) {
   const res = await api.patch(`/orders/${orderId}/status`, { status });
   return res.data.order;
 }
 
 // Payments
-export async function initializePayment(orderId: string) {
+export async function initializePayment(orderId) {
   const res = await api.post(`/payments/initialize/${orderId}`);
   return res.data;
 }
 
-export async function verifyPayment(txRef: string, simulate: boolean = true) {
+export async function verifyPayment(txRef, simulate = true) {
   const res = await api.get(`/payments/verify/${txRef}`, {
     params: { simulate: simulate ? 'true' : 'false' }
   });
   return res.data;
 }
 
-export async function processCashPayment(orderId: string) {
+export async function processCashPayment(orderId) {
   const res = await api.post(`/payments/cash/${orderId}`);
   return res.data;
 }
 
 // Expenses
-export async function fetchExpenses(category?: string) {
+export async function fetchExpenses(category) {
   const params = category ? { category } : {};
   const res = await api.get('/expenses', { params });
   return res.data.expenses;
 }
 
-export async function createExpense(expenseData: { title: string; category: string; amount: number; date?: string }) {
+export async function createExpense(expenseData) {
   const res = await api.post('/expenses', expenseData);
   return res.data.expense;
 }
 
-export async function deleteExpense(expenseId: string) {
+export async function deleteExpense(expenseId) {
   const res = await api.delete(`/expenses/${expenseId}`);
   return res.data;
 }
 
 // Analytics
-export async function fetchFinancialSummary(period: string = 'today') {
+export async function fetchFinancialSummary(period = 'today') {
   const res = await api.get('/analytics/financial-summary', { params: { period } });
   return res.data.summary;
 }

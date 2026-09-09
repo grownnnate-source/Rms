@@ -1,35 +1,22 @@
-import React, { useState } from 'react';
-import { Order, PaymentStatus } from '../../types';
-import { 
-  X, 
-  Printer, 
-  CheckCircle2, 
-  AlertCircle, 
-  Clock, 
-  RefreshCw, 
-  Smartphone, 
-  ShieldCheck, 
-  ArrowRight,
-  ExternalLink
-} from 'lucide-react';
-
-interface ChapaPaymentModalProps {
-  order: Order;
-  onClose: () => void;
-  onUpdateStatus: (orderId: string, status: PaymentStatus) => void;
-  onOpenReceipt: (order: Order) => void;
-}
-
-export const ChapaPaymentModal: React.FC<ChapaPaymentModalProps> = ({
+import { useState } from "react";
+import {
+  X,
+  Printer,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Smartphone,
+  ShieldCheck
+} from "lucide-react";
+export const ChapaPaymentModal = ({
   order,
   onClose,
   onUpdateStatus,
-  onOpenReceipt,
+  onOpenReceipt
 }) => {
-  const [activeStatus, setActiveStatus] = useState<PaymentStatus>(order.status);
-  const [isSimulating, setIsSimulating] = useState<boolean>(false);
-
-  const handleSimulatePayment = (statusToSet: PaymentStatus) => {
+  const [activeStatus, setActiveStatus] = useState(order.status);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const handleSimulatePayment = (statusToSet) => {
     setIsSimulating(true);
     setTimeout(() => {
       setActiveStatus(statusToSet);
@@ -37,55 +24,48 @@ export const ChapaPaymentModal: React.FC<ChapaPaymentModalProps> = ({
       setIsSimulating(false);
     }, 600);
   };
-
   const getStatusBadge = () => {
     switch (activeStatus) {
-      case 'PAID':
-        return (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#65A30D]/15 text-[#4D7C0F] border border-[#65A30D]/30">
+      case "PAID":
+        return <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#65A30D]/15 text-[#4D7C0F] border border-[#65A30D]/30">
             <CheckCircle2 className="w-4 h-4 text-[#65A30D]" />
             <span>PAID & VERIFIED</span>
-          </div>
-        );
-      case 'FAILED':
-        return (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
+          </div>;
+      case "FAILED":
+        return <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
             <AlertCircle className="w-4 h-4 text-rose-600" />
             <span>PAYMENT FAILED</span>
-          </div>
-        );
-      case 'EXPIRED':
-        return (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-stone-200 text-stone-700 border border-stone-300">
+          </div>;
+      case "EXPIRED":
+        return <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-stone-200 text-stone-700 border border-stone-300">
             <Clock className="w-4 h-4 text-stone-500" />
             <span>QR EXPIRED</span>
-          </div>
-        );
-      case 'PENDING':
+          </div>;
+      case "PENDING":
       default:
-        return (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+        return <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
             <span>PAYMENT PENDING</span>
-          </div>
-        );
+          </div>;
     }
   };
-
-  return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
-      onClick={onClose}
-    >
-      <div 
-        id="chapa-payment-panel"
-        className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-[#5A3E36]/15 overflow-hidden flex flex-col max-h-[95vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header with Chapa Branding */}
+  return <div
+    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+    onClick={onClose}
+  >
+      <div
+    id="chapa-payment-panel"
+    className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-[#5A3E36]/15 overflow-hidden flex flex-col max-h-[95vh]"
+    onClick={(e) => e.stopPropagation()}
+  >
+        {
+    /* Header with Chapa Branding */
+  }
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#5A3E36]/10 bg-[#FFF9F2]">
           <div className="flex items-center gap-3">
-            {/* Chapa Logo Icon */}
+            {
+    /* Chapa Logo Icon */
+  }
             <div className="w-9 h-9 rounded-xl bg-[#0052FF]/10 border border-[#0052FF]/20 flex items-center justify-center">
               <span className="font-black text-sm text-[#0052FF]">chapa</span>
             </div>
@@ -103,18 +83,22 @@ export const ChapaPaymentModal: React.FC<ChapaPaymentModalProps> = ({
           </div>
 
           <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-stone-500 hover:text-[#5A3E36] hover:bg-stone-200 transition-colors cursor-pointer"
-          >
+    type="button"
+    onClick={onClose}
+    className="w-8 h-8 rounded-full flex items-center justify-center text-stone-500 hover:text-[#5A3E36] hover:bg-stone-200 transition-colors cursor-pointer"
+  >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content Body */}
+        {
+    /* Content Body */
+  }
         <div className="p-6 space-y-5 overflow-y-auto">
           
-          {/* Order Summary Ribbon */}
+          {
+    /* Order Summary Ribbon */
+  }
           <div className="bg-[#FFF9F2] p-4 rounded-xl border border-[#5A3E36]/10 flex items-center justify-between">
             <div>
               <div className="text-xs text-[#78716C]">Order Reference</div>
@@ -135,12 +119,18 @@ export const ChapaPaymentModal: React.FC<ChapaPaymentModalProps> = ({
             </div>
           </div>
 
-          {/* QR Code & Payment Method */}
+          {
+    /* QR Code & Payment Method */
+  }
           <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl border border-stone-200 bg-stone-50/50">
-            {/* Realistic Crisp SVG QR Code */}
+            {
+    /* Realistic Crisp SVG QR Code */
+  }
             <div className="relative p-2.5 bg-white rounded-xl shadow-xs border border-stone-300 flex-shrink-0">
               <svg className="w-36 h-36" viewBox="0 0 100 100">
-                {/* 3 Position Corners */}
+                {
+    /* 3 Position Corners */
+  }
                 <rect x="5" y="5" width="25" height="25" fill="#000" />
                 <rect x="9" y="9" width="17" height="17" fill="#fff" />
                 <rect x="13" y="13" width="9" height="9" fill="#000" />
@@ -153,7 +143,9 @@ export const ChapaPaymentModal: React.FC<ChapaPaymentModalProps> = ({
                 <rect x="9" y="74" width="17" height="17" fill="#fff" />
                 <rect x="13" y="78" width="9" height="9" fill="#000" />
 
-                {/* QR Matrix Pattern simulation */}
+                {
+    /* QR Matrix Pattern simulation */
+  }
                 <rect x="36" y="8" width="5" height="5" fill="#000" />
                 <rect x="46" y="8" width="5" height="5" fill="#000" />
                 <rect x="56" y="12" width="5" height="5" fill="#000" />
@@ -181,20 +173,22 @@ export const ChapaPaymentModal: React.FC<ChapaPaymentModalProps> = ({
                 <rect x="70" y="76" width="5" height="5" fill="#000" />
                 <rect x="82" y="82" width="5" height="5" fill="#000" />
 
-                {/* Center Badge */}
+                {
+    /* Center Badge */
+  }
                 <rect x="38" y="38" width="24" height="24" rx="4" fill="#0052FF" />
                 <text x="50" y="54" fill="#fff" fontSize="10" fontWeight="bold" textAnchor="middle">C</text>
               </svg>
 
-              {activeStatus === 'PAID' && (
-                <div className="absolute inset-0 bg-white/90 rounded-xl flex flex-col items-center justify-center p-2 text-center">
+              {activeStatus === "PAID" && <div className="absolute inset-0 bg-white/90 rounded-xl flex flex-col items-center justify-center p-2 text-center">
                   <CheckCircle2 className="w-10 h-10 text-[#65A30D] mb-1" />
                   <span className="font-bold text-xs text-[#4D7C0F]">VERIFIED</span>
-                </div>
-              )}
+                </div>}
             </div>
 
-            {/* Payment Instructions */}
+            {
+    /* Payment Instructions */
+  }
             <div className="space-y-2 text-xs">
               <div className="font-bold text-[#5A3E36] flex items-center gap-1.5">
                 <Smartphone className="w-4 h-4 text-[#E85D75]" />
@@ -213,7 +207,9 @@ export const ChapaPaymentModal: React.FC<ChapaPaymentModalProps> = ({
             </div>
           </div>
 
-          {/* Demonstration / Tester Control Toolbar */}
+          {
+    /* Demonstration / Tester Control Toolbar */
+  }
           <div className="p-3 bg-[#FFF9F2] rounded-xl border border-[#5A3E36]/15 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-[#5A3E36] uppercase tracking-wide">
@@ -224,99 +220,84 @@ export const ChapaPaymentModal: React.FC<ChapaPaymentModalProps> = ({
 
             <div className="grid grid-cols-3 gap-2">
               <button
-                type="button"
-                disabled={isSimulating}
-                onClick={() => handleSimulatePayment('PAID')}
-                className={`px-2.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeStatus === 'PAID'
-                    ? 'bg-[#65A30D] text-white shadow-xs'
-                    : 'bg-white hover:bg-[#65A30D]/10 text-[#4D7C0F] border border-[#65A30D]/30'
-                }`}
-              >
+    type="button"
+    disabled={isSimulating}
+    onClick={() => handleSimulatePayment("PAID")}
+    className={`px-2.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeStatus === "PAID" ? "bg-[#65A30D] text-white shadow-xs" : "bg-white hover:bg-[#65A30D]/10 text-[#4D7C0F] border border-[#65A30D]/30"}`}
+  >
                 Simulate Paid ✓
               </button>
 
               <button
-                type="button"
-                disabled={isSimulating}
-                onClick={() => handleSimulatePayment('FAILED')}
-                className={`px-2.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeStatus === 'FAILED'
-                    ? 'bg-rose-600 text-white shadow-xs'
-                    : 'bg-white hover:bg-rose-50 text-rose-700 border border-rose-200'
-                }`}
-              >
+    type="button"
+    disabled={isSimulating}
+    onClick={() => handleSimulatePayment("FAILED")}
+    className={`px-2.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeStatus === "FAILED" ? "bg-rose-600 text-white shadow-xs" : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200"}`}
+  >
                 Simulate Fail ✕
               </button>
 
               <button
-                type="button"
-                disabled={isSimulating}
-                onClick={() => handleSimulatePayment('EXPIRED')}
-                className={`px-2.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeStatus === 'EXPIRED'
-                    ? 'bg-stone-700 text-white shadow-xs'
-                    : 'bg-white hover:bg-stone-100 text-stone-600 border border-stone-300'
-                }`}
-              >
+    type="button"
+    disabled={isSimulating}
+    onClick={() => handleSimulatePayment("EXPIRED")}
+    className={`px-2.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeStatus === "EXPIRED" ? "bg-stone-700 text-white shadow-xs" : "bg-white hover:bg-stone-100 text-stone-600 border border-stone-300"}`}
+  >
                 Expire QR ⟲
               </button>
             </div>
           </div>
 
-          {/* Conditional Guidance Note */}
-          {activeStatus !== 'PAID' ? (
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+          {
+    /* Conditional Guidance Note */
+  }
+          {activeStatus !== "PAID" ? <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
               <span>
                 <strong>Print Receipt Locked:</strong> Receipt printing is unlocked only after Chapa payment is confirmed as <strong>PAID</strong>.
               </span>
-            </div>
-          ) : (
-            <div className="p-3 rounded-xl bg-[#65A30D]/10 border border-[#65A30D]/30 text-[#4D7C0F] text-xs flex items-center justify-between">
+            </div> : <div className="p-3 rounded-xl bg-[#65A30D]/10 border border-[#65A30D]/30 text-[#4D7C0F] text-xs flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#65A30D]" />
                 <span className="font-semibold">Payment Received! Receipt is ready for thermal printing.</span>
               </div>
-            </div>
-          )}
+            </div>}
 
         </div>
 
-        {/* Footer with PRINT RECEIPT button (unlocked strictly after paid) */}
+        {
+    /* Footer with PRINT RECEIPT button (unlocked strictly after paid) */
+  }
         <div className="p-4 border-t border-stone-200 bg-[#FFF9F2] flex items-center justify-between gap-3">
           <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2.5 rounded-xl border border-stone-300 text-xs font-bold text-stone-700 hover:bg-white transition-colors cursor-pointer"
-          >
+    type="button"
+    onClick={onClose}
+    className="px-4 py-2.5 rounded-xl border border-stone-300 text-xs font-bold text-stone-700 hover:bg-white transition-colors cursor-pointer"
+  >
             Back to Queue
           </button>
 
-          {/* PRINT RECEIPT BUTTON */}
+          {
+    /* PRINT RECEIPT BUTTON */
+  }
           <button
-            id="chapa-print-receipt-btn"
-            type="button"
-            disabled={activeStatus !== 'PAID'}
-            onClick={() => {
-              onOpenReceipt({
-                ...order,
-                status: 'PAID',
-                paidAt: 'Just now',
-              });
-            }}
-            className={`px-6 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all flex items-center gap-2 ${
-              activeStatus === 'PAID'
-                ? 'bg-[#5A3E36] hover:bg-[#47302a] text-white cursor-pointer active:scale-98'
-                : 'bg-stone-200 text-stone-400 cursor-not-allowed shadow-none'
-            }`}
-          >
+    id="chapa-print-receipt-btn"
+    type="button"
+    disabled={activeStatus !== "PAID"}
+    onClick={() => {
+      onOpenReceipt({
+        ...order,
+        status: "PAID",
+        paidAt: "Just now"
+      });
+    }}
+    className={`px-6 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all flex items-center gap-2 ${activeStatus === "PAID" ? "bg-[#5A3E36] hover:bg-[#47302a] text-white cursor-pointer active:scale-98" : "bg-stone-200 text-stone-400 cursor-not-allowed shadow-none"}`}
+  >
             <Printer className="w-4 h-4" />
             <span>PRINT RECEIPT</span>
           </button>
         </div>
 
       </div>
-    </div>
-  );
+    </div>;
 };
