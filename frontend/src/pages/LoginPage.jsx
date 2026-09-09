@@ -22,7 +22,8 @@ export const LoginPage = ({ onLoginSuccess }) => {
         setPin("");
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || "Invalid staff PIN. Please check your code and try again.");
+      const isNetwork = !err.response || err.code === "ERR_NETWORK" || err.message?.toLowerCase().includes("network");
+      setErrorMsg(err.response?.data?.message || (isNetwork ? "Cannot connect to backend server. Make sure backend is running!" : "Invalid staff PIN. Please check your code and try again."));
       setPin("");
     } finally {
       setIsLoading(false);

@@ -11,8 +11,14 @@ import { ManagerPage } from "./pages/ManagerPage";
 import { LoginPage } from "./pages/LoginPage";
 
 function ProtectedRoute({ user, allowedRoles, children }) {
-  if (!user) return <Navigate to="/login" replace />;
-  if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to={`/${user.role}`} replace />;
+  const activeUser = user || (() => {
+    try {
+      const u = localStorage.getItem("rms_user");
+      return u ? JSON.parse(u) : null;
+    } catch { return null; }
+  })();
+  if (!activeUser) return <Navigate to="/login" replace />;
+  if (allowedRoles && !allowedRoles.includes(activeUser.role)) return <Navigate to={`/${activeUser.role}`} replace />;
   return children;
 }
 
