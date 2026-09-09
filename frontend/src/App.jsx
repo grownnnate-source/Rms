@@ -201,16 +201,6 @@ export default function App() {
       } catch (err) {
         console.warn("Live orders fetch fallback:", err.message);
       }
-
-      // 4. Fetch Live Expenses from MongoDB
-      try {
-        const liveExpenses = await apiFetchExpenses();
-        if (isSubscribed && Array.isArray(liveExpenses) && liveExpenses.length > 0) {
-          setExpenses(liveExpenses);
-        }
-      } catch (err) {
-        console.warn("Live expenses fetch fallback:", err.message);
-      }
     }
 
     initializeSystem();
