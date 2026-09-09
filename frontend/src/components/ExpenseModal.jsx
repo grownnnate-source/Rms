@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 const EXPENSE_CATEGORIES = [
-  "Dairy & Cream",
-  "Cones & Packaging",
-  "Equipment & Chiller",
-  "Utilities & Power",
-  "Staff Stipend",
-  "Platform & Fees"
+  { label: "Ingredients (Dairy & Flavors)", value: "Ingredients" },
+  { label: "Supplies (Cones, Cups & Packaging)", value: "Supplies" },
+  { label: "Utilities (Power & Freezers)", value: "Utilities" },
+  { label: "Maintenance (Chiller & Equipment)", value: "Maintenance" },
+  { label: "Other Operating Expenses", value: "Other" }
 ];
 export const ExpenseModal = ({ onClose, onSave }) => {
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("Dairy & Cream");
+  const [category, setCategory] = useState("Ingredients");
   const [amount, setAmount] = useState(500);
   const [date, setDate] = useState((/* @__PURE__ */ new Date()).toISOString().split("T")[0]);
   const [approvedBy, setApprovedBy] = useState("Prof. Selamawit");
@@ -69,13 +68,15 @@ export const ExpenseModal = ({ onClose, onSave }) => {
                 Category
               </label>
               <select
-    value={category}
-    onChange={(e) => setCategory(e.target.value)}
-    className="w-full px-3.5 py-2 text-xs rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#E85D75] text-[#292524]"
-  >
-                {EXPENSE_CATEGORIES.map((cat) => <option key={cat} value={cat}>
-                    {cat}
-                  </option>)}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-stone-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#E85D75] text-[#292524]"
+              >
+                {EXPENSE_CATEGORIES.map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
               </select>
             </div>
 

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { initializePayment, verifyPayment } from "../lib/axios";
 import {
   X,
   Printer,
@@ -8,6 +9,8 @@ import {
   Smartphone,
   ShieldCheck
 } from "lucide-react";
+const generateDefaultTxRef = (orderNumber) => `RMS-${orderNumber || 101}-${Date.now()}`;
+
 export const ChapaPaymentModal = ({
   order,
   onClose,
@@ -16,13 +19,41 @@ export const ChapaPaymentModal = ({
 }) => {
   const [activeStatus, setActiveStatus] = useState(order.status);
   const [isSimulating, setIsSimulating] = useState(false);
-  const handleSimulatePayment = (statusToSet) => {
+  const [activeTxRef, setActiveTxRef] = useState(
+    () => order.chapaTxRef || generateDefaultTxRef(order.orderNumber)
+  );
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (order.id && /^[0-9a-fA-F]{24}$/.test(order.id) && order.status !== "PAID") {
+      initializePayment(order.id)
+        .then((res) => {
+          if (!isMounted) return;
+          if (res.txRef) setActiveTxRef(res.txRef);
+          if (res.qrCode) setQrCodeDataUrl(res.qrCode);
+        })
+        .catch((err) => {
+          console.warn("Chapa payment initialization fallback to demo mode:", err);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [order.id, order.status]);
+
+  const handleSimulatePayment = async (statusToSet) => {
     setIsSimulating(true);
-    setTimeout(() => {
-      setActiveStatus(statusToSet);
-      onUpdateStatus(order.id, statusToSet);
-      setIsSimulating(false);
-    }, 600);
+    if (statusToSet === "PAID" && activeTxRef) {
+      try {
+        await verifyPayment(activeTxRef, true);
+      } catch (e) {
+        console.warn("Backend verifyPayment fallback to local status:", e);
+      }
+    }
+    setActiveStatus(statusToSet);
+    onUpdateStatus(order.id, statusToSet);
+    setIsSimulating(false);
   };
   const getStatusBadge = () => {
     switch (activeStatus) {
@@ -106,7 +137,7 @@ export const ChapaPaymentModal = ({
                 ORDER #{order.orderNumber}
               </div>
               <div className="text-[11px] font-mono text-stone-500 mt-0.5">
-                Ref: {order.chapaTxRef}
+                Ref: {activeTxRef}
               </div>
             </div>
 
@@ -124,61 +155,60 @@ export const ChapaPaymentModal = ({
   }
           <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl border border-stone-200 bg-stone-50/50">
             {
-    /* Realistic Crisp SVG QR Code */
+    /* Realistic Crisp SVG / Live Chapa QR Code */
   }
             <div className="relative p-2.5 bg-white rounded-xl shadow-xs border border-stone-300 flex-shrink-0">
-              <svg className="w-36 h-36" viewBox="0 0 100 100">
-                {
-    /* 3 Position Corners */
-  }
-                <rect x="5" y="5" width="25" height="25" fill="#000" />
-                <rect x="9" y="9" width="17" height="17" fill="#fff" />
-                <rect x="13" y="13" width="9" height="9" fill="#000" />
+              {qrCodeDataUrl ? (
+                <img
+                  src={qrCodeDataUrl}
+                  alt="Chapa Payment QR Code"
+                  className="w-36 h-36 object-contain rounded-lg"
+                />
+              ) : (
+                <svg className="w-36 h-36" viewBox="0 0 100 100">
+                  <rect x="5" y="5" width="25" height="25" fill="#000" />
+                  <rect x="9" y="9" width="17" height="17" fill="#fff" />
+                  <rect x="13" y="13" width="9" height="9" fill="#000" />
 
-                <rect x="70" y="5" width="25" height="25" fill="#000" />
-                <rect x="74" y="9" width="17" height="17" fill="#fff" />
-                <rect x="78" y="13" width="9" height="9" fill="#000" />
+                  <rect x="70" y="5" width="25" height="25" fill="#000" />
+                  <rect x="74" y="9" width="17" height="17" fill="#fff" />
+                  <rect x="78" y="13" width="9" height="9" fill="#000" />
 
-                <rect x="5" y="70" width="25" height="25" fill="#000" />
-                <rect x="9" y="74" width="17" height="17" fill="#fff" />
-                <rect x="13" y="78" width="9" height="9" fill="#000" />
+                  <rect x="5" y="70" width="25" height="25" fill="#000" />
+                  <rect x="9" y="74" width="17" height="17" fill="#fff" />
+                  <rect x="13" y="78" width="9" height="9" fill="#000" />
 
-                {
-    /* QR Matrix Pattern simulation */
-  }
-                <rect x="36" y="8" width="5" height="5" fill="#000" />
-                <rect x="46" y="8" width="5" height="5" fill="#000" />
-                <rect x="56" y="12" width="5" height="5" fill="#000" />
-                <rect x="36" y="20" width="5" height="5" fill="#000" />
-                <rect x="42" y="24" width="5" height="5" fill="#000" />
-                <rect x="50" y="20" width="5" height="5" fill="#000" />
+                  <rect x="36" y="8" width="5" height="5" fill="#000" />
+                  <rect x="46" y="8" width="5" height="5" fill="#000" />
+                  <rect x="56" y="12" width="5" height="5" fill="#000" />
+                  <rect x="36" y="20" width="5" height="5" fill="#000" />
+                  <rect x="42" y="24" width="5" height="5" fill="#000" />
+                  <rect x="50" y="20" width="5" height="5" fill="#000" />
 
-                <rect x="10" y="38" width="5" height="5" fill="#000" />
-                <rect x="22" y="42" width="5" height="5" fill="#000" />
-                <rect x="36" y="36" width="5" height="5" fill="#000" />
-                <rect x="44" y="42" width="5" height="5" fill="#000" />
-                <rect x="54" y="38" width="5" height="5" fill="#000" />
-                <rect x="68" y="42" width="5" height="5" fill="#000" />
-                <rect x="80" y="38" width="5" height="5" fill="#000" />
+                  <rect x="10" y="38" width="5" height="5" fill="#000" />
+                  <rect x="22" y="42" width="5" height="5" fill="#000" />
+                  <rect x="36" y="36" width="5" height="5" fill="#000" />
+                  <rect x="44" y="42" width="5" height="5" fill="#000" />
+                  <rect x="54" y="38" width="5" height="5" fill="#000" />
+                  <rect x="68" y="42" width="5" height="5" fill="#000" />
+                  <rect x="80" y="38" width="5" height="5" fill="#000" />
 
-                <rect x="36" y="52" width="5" height="5" fill="#000" />
-                <rect x="44" y="58" width="5" height="5" fill="#000" />
-                <rect x="54" y="52" width="5" height="5" fill="#000" />
-                <rect x="64" y="56" width="5" height="5" fill="#000" />
-                <rect x="76" y="52" width="5" height="5" fill="#000" />
+                  <rect x="36" y="52" width="5" height="5" fill="#000" />
+                  <rect x="44" y="58" width="5" height="5" fill="#000" />
+                  <rect x="54" y="52" width="5" height="5" fill="#000" />
+                  <rect x="64" y="56" width="5" height="5" fill="#000" />
+                  <rect x="76" y="52" width="5" height="5" fill="#000" />
 
-                <rect x="36" y="72" width="5" height="5" fill="#000" />
-                <rect x="46" y="78" width="5" height="5" fill="#000" />
-                <rect x="58" y="70" width="5" height="5" fill="#000" />
-                <rect x="70" y="76" width="5" height="5" fill="#000" />
-                <rect x="82" y="82" width="5" height="5" fill="#000" />
+                  <rect x="36" y="72" width="5" height="5" fill="#000" />
+                  <rect x="46" y="78" width="5" height="5" fill="#000" />
+                  <rect x="58" y="70" width="5" height="5" fill="#000" />
+                  <rect x="70" y="76" width="5" height="5" fill="#000" />
+                  <rect x="82" y="82" width="5" height="5" fill="#000" />
 
-                {
-    /* Center Badge */
-  }
-                <rect x="38" y="38" width="24" height="24" rx="4" fill="#0052FF" />
-                <text x="50" y="54" fill="#fff" fontSize="10" fontWeight="bold" textAnchor="middle">C</text>
-              </svg>
+                  <rect x="38" y="38" width="24" height="24" rx="4" fill="#0052FF" />
+                  <text x="50" y="54" fill="#fff" fontSize="10" fontWeight="bold" textAnchor="middle">C</text>
+                </svg>
+              )}
 
               {activeStatus === "PAID" && <div className="absolute inset-0 bg-white/90 rounded-xl flex flex-col items-center justify-center p-2 text-center">
                   <CheckCircle2 className="w-10 h-10 text-[#65A30D] mb-1" />

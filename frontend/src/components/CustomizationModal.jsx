@@ -8,6 +8,9 @@ const TOPPING_OPTIONS = [
   { name: "Roasted Nuts & Almonds", price: 30 },
   { name: "Warm Fudge Drizzle", price: 20 }
 ];
+
+const createCustomizedItemId = () => `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
 export const CustomizationModal = ({
   product,
   onClose,
@@ -35,7 +38,7 @@ export const CustomizationModal = ({
   };
   const handleConfirm = () => {
     const orderItem = {
-      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      id: createCustomizedItemId(),
       productId: product.id,
       name: product.name,
       category: product.category,
