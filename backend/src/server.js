@@ -43,21 +43,19 @@ app.use(cors({ origin: isOriginAllowed, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Ice Cream Shop API is running smoothly',
-    timestamp: new Date().toISOString()
-  });
-});
+// Mount Routes (supports both /api/* and /* prefixes)
+const mountRoutes = (prefix = '') => {
+  app.get(`${prefix}/health`, (req, res) => res.status(200).json({ success: true, message: 'Ice Cream Shop API is running smoothly', timestamp: new Date().toISOString() }));
+  app.use(`${prefix}/auth`, authRoutes);
+  app.use(`${prefix}/products`, productRoutes);
+  app.use(`${prefix}/orders`, orderRoutes);
+  app.use(`${prefix}/payments`, paymentRoutes);
+  app.use(`${prefix}/expenses`, expenseRoutes);
+  app.use(`${prefix}/analytics`, analyticsRoutes);
+};
 
-// Mount Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/expenses', expenseRoutes);
-app.use('/api/analytics', analyticsRoutes);
+mountRoutes('/api');
+mountRoutes('');
 
 // Error handling middlewares
 app.use(notFound);
