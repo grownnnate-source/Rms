@@ -1,11 +1,23 @@
 import { Link, useLocation } from "react-router";
-import { IceCream, CreditCard, LayoutDashboard, Clock, RotateCcw, PlusCircle } from "lucide-react";
+import {
+  IceCream,
+  CreditCard,
+  LayoutDashboard,
+  Clock,
+  RotateCcw,
+  PlusCircle,
+  LogIn,
+  LogOut,
+  UserCheck
+} from "lucide-react";
 
 export const Navbar = ({
   pendingOrdersCount = 0,
   onResetData,
   onAddSampleOrder,
-  activeStaffName = "Staff User"
+  activeStaffName = "Staff User",
+  currentUser,
+  onLogout
 }) => {
   const location = useLocation();
   const currentPath = location.pathname;
@@ -13,6 +25,7 @@ export const Navbar = ({
   const isServer = currentPath === "/" || currentPath === "/server";
   const isCashier = currentPath === "/cashier";
   const isManager = currentPath === "/manager";
+  const isLogin = currentPath === "/login";
 
   return (
     <header className="no-print sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#5A3E36]/10 px-4 lg:px-6 py-2.5 shadow-sm">
@@ -38,11 +51,11 @@ export const Navbar = ({
           {/* Quick Staff Badge (Mobile) */}
           <div className="md:hidden flex items-center gap-1.5 text-xs text-[#5A3E36] bg-[#FFF9F2] px-2.5 py-1 rounded-lg border border-[#5A3E36]/10 font-medium">
             <span className="w-2 h-2 rounded-full bg-[#E85D75]" />
-            {activeStaffName}
+            <span>{activeStaffName}</span>
           </div>
         </div>
 
-        {/* 3 Role Switcher Pills via React Router */}
+        {/* Role Switcher Pills via React Router */}
         <nav aria-label="System role navigation" className="flex items-center bg-[#FFF9F2] p-1 rounded-xl border border-[#5A3E36]/15 shadow-inner">
           <Link
             id="role-server-tab"
@@ -89,17 +102,44 @@ export const Navbar = ({
             <span>3. Manager</span>
             <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[#5A3E36]/10 text-[#5A3E36]">Desktop</span>
           </Link>
+
+          <Link
+            id="role-login-tab"
+            to="/login"
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer ${
+              isLogin
+                ? "bg-white text-[#E85D75] shadow-sm font-bold border border-[#E85D75]/30"
+                : "text-[#78716C] hover:text-[#5A3E36]"
+            }`}
+          >
+            <LogIn className={`w-4 h-4 ${isLogin ? "text-[#E85D75]" : "text-[#78716C]"}`} />
+            <span>Login</span>
+          </Link>
         </nav>
 
-        {/* System Meta & Demo Helper */}
+        {/* System Meta, Staff Profile & Demo Helpers */}
         <div className="hidden lg:flex items-center gap-3">
           <div className="text-right">
-            <div className="text-xs font-semibold text-[#5A3E36]">{activeStaffName}</div>
+            <div className="text-xs font-semibold text-[#5A3E36] flex items-center justify-end gap-1">
+              <UserCheck className="w-3.5 h-3.5 text-[#65A30D]" />
+              <span>{currentUser?.name || activeStaffName}</span>
+            </div>
             <div className="text-[11px] text-[#78716C] flex items-center justify-end gap-1">
               <Clock className="w-3 h-3 text-[#E85D75]" />
-              <span>Shift Active</span>
+              <span className="capitalize">{currentUser?.role || "Staff"} Session Active</span>
             </div>
           </div>
+
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              title="Sign out or switch staff"
+              className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200 cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
 
           <div className="h-7 w-[1px] bg-[#5A3E36]/15" />
 
@@ -131,4 +171,5 @@ export const Navbar = ({
     </header>
   );
 };
+
 export default Navbar;

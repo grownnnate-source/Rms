@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Routes, Route, useLocation } from "react-router";
+import { Routes, Route, useLocation, useNavigate } from "react-router";
 import {
   loginWithPin,
   fetchProducts as apiFetchProducts,
@@ -26,6 +26,7 @@ import { Navbar } from "./components/Navbar";
 import { HomePage } from "./pages/HomePage";
 import { CashierPage } from "./pages/CashierPage";
 import { ManagerPage } from "./pages/ManagerPage";
+import { LoginPage } from "./pages/LoginPage";
 
 function getIconForProduct(name = "", category = "") {
   const n = name.toLowerCase();
@@ -159,11 +160,34 @@ export default function App() {
   const [currentOrderItems, setCurrentOrderItems] = useState([]);
   const [isLiveBackend, setIsLiveBackend] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem("rms_user");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("rms_jwt_token");
+    localStorage.removeItem("rms_user");
+    setCurrentUser(null);
+    navigate("/login");
+  };
 
   // Role Authentication Synchronization across routes
   useEffect(() => {
     async function syncRoleAuth() {
       const path = location.pathname;
+      if (path === "/login") return; // Do not auto-authenticate on login page
+
       let targetPin = "1111";
       let targetRole = "attendant";
 
@@ -176,8 +200,11 @@ export default function App() {
       }
 
       try {
-        await loginWithPin(targetPin, targetRole);
+        const authData = await loginWithPin(targetPin, targetRole);
         setIsLiveBackend(true);
+        if (authData?.user) {
+          setCurrentUser(authData.user);
+        }
 
         if (path === "/manager") {
           const liveExpenses = await apiFetchExpenses();
@@ -572,11 +599,17 @@ export default function App() {
         onResetData={handleResetData}
         onAddSampleOrder={handleAddSampleOrder}
         activeStaffName={activeStaffName}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Main Routed Page Area */}
       <main className="flex-1">
         <Routes>
+          <Route
+            path="/login"
+            element={<LoginPage onLoginSuccess={handleLoginSuccess} />}
+          />
           <Route
             path="/"
             element={
