@@ -1,10 +1,10 @@
-import React from "react";
+import { useState } from "react";
 import { Printer, X, Copy } from "lucide-react";
 export const ReceiptModal = ({ order, onClose }) => {
   const handlePrint = () => {
     window.print();
   };
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
   const handleCopyText = () => {
     const textLines = [
       "================================",

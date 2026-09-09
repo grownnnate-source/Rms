@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { ProductModal } from "./ProductModal";
-import { ExpenseModal } from "./ExpenseModal";
-import { SalesChart } from "./SalesChart";
-import { ProductIcon } from "../common/ProductIcon";
-import { ReceiptModal } from "../receipt/ReceiptModal";
+import { ProductModal } from "../components/ProductModal";
+import { ExpenseModal } from "../components/ExpenseModal";
+import { SalesChart } from "../components/SalesChart";
+import { ProductIcon } from "../components/ProductIcon";
+import { ReceiptModal } from "../components/ReceiptModal";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -24,7 +24,7 @@ import {
   CreditCard,
   Sparkles
 } from "lucide-react";
-export const ManagerView = ({
+export const ManagerPage = ({
   products,
   orders,
   expenses,
@@ -1121,3 +1121,6 @@ export const ManagerView = ({
 
     </div>;
 };
+
+export const ManagerView = ManagerPage;
+export default ManagerPage;

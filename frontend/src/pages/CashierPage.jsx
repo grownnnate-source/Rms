@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ChapaPaymentModal } from "./ChapaPaymentModal";
-import { ReceiptModal } from "../receipt/ReceiptModal";
+import { ChapaPaymentModal } from "../components/ChapaPaymentModal";
+import { ReceiptModal } from "../components/ReceiptModal";
 import {
   CreditCard,
   Printer,
@@ -12,7 +12,7 @@ import {
   List,
   Grid
 } from "lucide-react";
-export const CashierView = ({
+export const CashierPage = ({
   orders,
   onUpdateOrderStatus
 }) => {
@@ -383,3 +383,6 @@ export const CashierView = ({
 
     </div>;
 };
+
+export const CashierView = CashierPage;
+export default CashierPage;

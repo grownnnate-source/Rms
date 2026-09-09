@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { CustomizationModal } from "./CustomizationModal";
-import { ProductIcon } from "../common/ProductIcon";
+import { CustomizationModal } from "../components/CustomizationModal";
+import { ProductIcon } from "../components/ProductIcon";
 import {
   Plus,
   Minus,
@@ -23,7 +23,7 @@ const CATEGORIES = [
 
 const createQuickItemId = (productId) => `item-${productId}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
-export const ServerView = ({
+export const HomePage = ({
   products,
   currentOrderItems,
   onAddToCart,
@@ -469,3 +469,6 @@ export const ServerView = ({
 
     </div>;
 };
+
+export const ServerView = HomePage;
+export default HomePage;

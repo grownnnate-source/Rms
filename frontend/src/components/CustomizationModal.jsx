@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, Plus, Minus, Check, Sparkles } from "lucide-react";
-import { ProductIcon } from "../common/ProductIcon";
+import { ProductIcon } from "./ProductIcon";
 const TOPPING_OPTIONS = [
   { name: "Crushed Oreo Crumble", price: 25 },
   { name: "Rainbow Sprinkles", price: 15 },

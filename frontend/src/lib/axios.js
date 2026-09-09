@@ -1,20 +1,20 @@
-import axios from 'axios';
-import { io } from 'socket.io-client';
+import axios from "axios";
+import { io } from "socket.io-client";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3000";
 
-// Axios instance with JWT interceptor
-export const api = axios.create({
+// Axios instance matching MERN STACK pattern with JWT interceptor
+const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json"
   },
   timeout: 10000
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('rms_jwt_token');
+  const token = localStorage.getItem("rms_jwt_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -31,23 +31,23 @@ export const socket = io(SOCKET_URL, {
 
 // Authentication
 export async function loginWithPin(pin, role) {
-  const res = await api.post('/auth/pin-login', { pin, role });
+  const res = await api.post("/auth/pin-login", { pin, role });
   if (res.data.token) {
-    localStorage.setItem('rms_jwt_token', res.data.token);
-    localStorage.setItem('rms_user', JSON.stringify(res.data.user));
+    localStorage.setItem("rms_jwt_token", res.data.token);
+    localStorage.setItem("rms_user", JSON.stringify(res.data.user));
   }
   return res.data;
 }
 
 export async function fetchCurrentStaff() {
-  const res = await api.get('/auth/me');
+  const res = await api.get("/auth/me");
   return res.data;
 }
 
 // Products
 export async function fetchProducts(category) {
-  const params = category && category !== 'all' ? { category } : {};
-  const res = await api.get('/products', { params });
+  const params = category && category !== "all" ? { category } : {};
+  const res = await api.get("/products", { params });
   return res.data.products;
 }
 
@@ -57,19 +57,19 @@ export async function toggleProductAvailability(productId, isAvailable) {
 }
 
 export async function createProduct(productData) {
-  const res = await api.post('/products', productData);
+  const res = await api.post("/products", productData);
   return res.data.product;
 }
 
 // Orders
 export async function createOrder(items) {
-  const res = await api.post('/orders', { items });
+  const res = await api.post("/orders", { items });
   return res.data.order;
 }
 
 export async function fetchOrders(status) {
   const params = status ? { status } : {};
-  const res = await api.get('/orders', { params });
+  const res = await api.get("/orders", { params });
   return res.data.orders;
 }
 
@@ -86,7 +86,7 @@ export async function initializePayment(orderId) {
 
 export async function verifyPayment(txRef, simulate = true) {
   const res = await api.get(`/payments/verify/${txRef}`, {
-    params: { simulate: simulate ? 'true' : 'false' }
+    params: { simulate: simulate ? "true" : "false" }
   });
   return res.data;
 }
@@ -99,12 +99,12 @@ export async function processCashPayment(orderId) {
 // Expenses
 export async function fetchExpenses(category) {
   const params = category ? { category } : {};
-  const res = await api.get('/expenses', { params });
+  const res = await api.get("/expenses", { params });
   return res.data.expenses;
 }
 
 export async function createExpense(expenseData) {
-  const res = await api.post('/expenses', expenseData);
+  const res = await api.post("/expenses", expenseData);
   return res.data.expense;
 }
 
@@ -114,17 +114,20 @@ export async function deleteExpense(expenseId) {
 }
 
 // Analytics
-export async function fetchFinancialSummary(period = 'today') {
-  const res = await api.get('/analytics/financial-summary', { params: { period } });
+export async function fetchFinancialSummary(period = "today") {
+  const res = await api.get("/analytics/financial-summary", { params: { period } });
   return res.data.summary;
 }
 
 export async function fetchBestSellers() {
-  const res = await api.get('/analytics/best-sellers');
+  const res = await api.get("/analytics/best-sellers");
   return res.data.bestSellers;
 }
 
 export async function fetchSalesTrends() {
-  const res = await api.get('/analytics/sales-trend');
+  const res = await api.get("/analytics/sales-trend");
   return res.data.trends;
 }
+
+export { api };
+export default api;

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Routes, Route } from "react-router";
 import {
   INITIAL_PRODUCTS,
   INITIAL_ORDERS,
@@ -7,13 +8,13 @@ import {
   MONTHLY_SALES,
   YEARLY_SALES,
   STAFF_MEMBERS
-} from "./data/mockData";
-import { HeaderNav } from "./components/HeaderNav";
-import { ServerView } from "./components/server/ServerView";
-import { CashierView } from "./components/cashier/CashierView";
-import { ManagerView } from "./components/manager/ManagerView";
+} from "./lib/mockData";
+import { Navbar } from "./components/Navbar";
+import { HomePage } from "./pages/HomePage";
+import { CashierPage } from "./pages/CashierPage";
+import { ManagerPage } from "./pages/ManagerPage";
+
 export default function App() {
-  const [currentRole, setCurrentRole] = useState("server");
   const [products, setProducts] = useState(() => {
     const saved = localStorage.getItem("campus_scoop_products");
     if (saved) {
@@ -25,6 +26,7 @@ export default function App() {
     }
     return INITIAL_PRODUCTS;
   });
+
   const [orders, setOrders] = useState(() => {
     const saved = localStorage.getItem("campus_scoop_orders");
     if (saved) {
@@ -36,6 +38,7 @@ export default function App() {
     }
     return INITIAL_ORDERS;
   });
+
   const [expenses, setExpenses] = useState(() => {
     const saved = localStorage.getItem("campus_scoop_expenses");
     if (saved) {
@@ -47,6 +50,7 @@ export default function App() {
     }
     return INITIAL_EXPENSES;
   });
+
   const [staff, setStaff] = useState(() => {
     const saved = localStorage.getItem("campus_scoop_staff");
     if (saved) {
@@ -58,239 +62,314 @@ export default function App() {
     }
     return STAFF_MEMBERS;
   });
+
+  // Current In-Progress Order (Cart) for Server View
   const [currentOrderItems, setCurrentOrderItems] = useState([]);
-  const [nextOrderNumber, setNextOrderNumber] = useState(105);
+
+  // Save state back to localStorage
   useEffect(() => {
     localStorage.setItem("campus_scoop_products", JSON.stringify(products));
   }, [products]);
+
   useEffect(() => {
     localStorage.setItem("campus_scoop_orders", JSON.stringify(orders));
   }, [orders]);
+
   useEffect(() => {
     localStorage.setItem("campus_scoop_expenses", JSON.stringify(expenses));
   }, [expenses]);
+
   useEffect(() => {
     localStorage.setItem("campus_scoop_staff", JSON.stringify(staff));
   }, [staff]);
-  const handleAddToCart = (item) => {
+
+  // Order Number Generator Sequence
+  const nextOrderNumber =
+    orders.length > 0
+      ? Math.max(...orders.map((o) => o.orderNumber || 0)) + 1
+      : 101;
+
+  // Cart Management Handlers
+  const handleAddToCart = (newItem) => {
     setCurrentOrderItems((prev) => {
       const existingIdx = prev.findIndex(
-        (i) => i.productId === item.productId && i.scoops === item.scoops && i.serving === item.serving && JSON.stringify(i.toppings.sort()) === JSON.stringify(item.toppings.sort())
+        (i) =>
+          i.productId === newItem.productId &&
+          i.serving === newItem.serving &&
+          i.scoops === newItem.scoops &&
+          JSON.stringify(i.toppings.slice().sort()) ===
+            JSON.stringify(newItem.toppings.slice().sort())
       );
+
       if (existingIdx > -1) {
         const updated = [...prev];
-        const current = updated[existingIdx];
-        const newQty = current.quantity + item.quantity;
+        const item = updated[existingIdx];
+        const newQty = item.quantity + newItem.quantity;
+        const perUnitPrice = item.totalItemPrice / item.quantity;
         updated[existingIdx] = {
-          ...current,
+          ...item,
           quantity: newQty,
-          totalItemPrice: current.unitPrice * newQty
+          totalItemPrice: perUnitPrice * newQty
         };
         return updated;
       }
-      return [...prev, item];
+
+      return [...prev, newItem];
     });
   };
-  const handleUpdateCartItemQty = (itemId, newQty) => {
-    if (newQty <= 0) {
-      handleRemoveCartItem(itemId);
-      return;
-    }
-    setCurrentOrderItems(
-      (prev) => prev.map(
-        (item) => item.id === itemId ? {
-          ...item,
-          quantity: newQty,
-          totalItemPrice: item.unitPrice * newQty
-        } : item
-      )
-    );
+
+  const handleUpdateCartItemQty = (index, delta) => {
+    setCurrentOrderItems((prev) => {
+      const updated = [...prev];
+      const item = updated[index];
+      const newQty = item.quantity + delta;
+
+      if (newQty <= 0) {
+        return prev.filter((_, idx) => idx !== index);
+      }
+
+      const perUnitPrice = item.totalItemPrice / item.quantity;
+      updated[index] = {
+        ...item,
+        quantity: newQty,
+        totalItemPrice: perUnitPrice * newQty
+      };
+      return updated;
+    });
   };
-  const handleRemoveCartItem = (itemId) => {
-    setCurrentOrderItems((prev) => prev.filter((item) => item.id !== itemId));
+
+  const handleRemoveCartItem = (index) => {
+    setCurrentOrderItems((prev) => prev.filter((_, idx) => idx !== index));
   };
+
   const handleClearCart = () => {
     setCurrentOrderItems([]);
   };
-  const handleSubmitOrder = (customerNote) => {
+
+  // Submit Order from Server -> Cashier
+  const handleSubmitOrder = (note = "") => {
     if (currentOrderItems.length === 0) return null;
-    const subtotal = currentOrderItems.reduce((sum, i) => sum + i.totalItemPrice, 0);
+
+    const subtotal = currentOrderItems.reduce(
+      (sum, item) => sum + item.totalItemPrice,
+      0
+    );
     const tax = Math.round(subtotal * 0.05);
     const total = subtotal + tax;
-    const now = /* @__PURE__ */ new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    const now = new Date();
+    const formattedDate = `${now.toISOString().split("T")[0]} ${now.toTimeString().split(" ")[0].slice(0, 5)}`;
+
     const newOrder = {
-      id: `ord-${nextOrderNumber}`,
+      id: `ord-${Date.now()}`,
       orderNumber: nextOrderNumber,
-      createdAt: `Just now (${timeStr})`,
-      serverName: "Bethlehem T.",
+      createdAt: formattedDate,
+      serverName: "Abebe B. (Attendant)",
       cashierName: "Dawit K.",
+      status: "PENDING",
       items: [...currentOrderItems],
       subtotal,
       tax,
       total,
-      status: "PENDING",
-      paymentMethod: "CHAPA_QR",
-      chapaTxRef: `chapa-tx-${nextOrderNumber}-${Math.floor(1e3 + Math.random() * 9e3)}`,
-      customerNote: customerNote || void 0
+      note: note.trim()
     };
+
     setOrders((prev) => [newOrder, ...prev]);
     setCurrentOrderItems([]);
-    setNextOrderNumber((prev) => prev + 1);
     return newOrder;
   };
-  const handleUpdateOrderStatus = (orderId, status) => {
-    setOrders(
-      (prev) => prev.map((ord) => {
-        if (ord.id === orderId) {
-          const now = /* @__PURE__ */ new Date();
-          const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-          return {
-            ...ord,
-            status,
-            paidAt: status === "PAID" ? timeStr : ord.paidAt
-          };
-        }
-        return ord;
-      })
+
+  // Cashier: Update Order Status
+  const handleUpdateOrderStatus = (orderId, newStatus) => {
+    setOrders((prev) =>
+      prev.map((ord) =>
+        ord.id === orderId
+          ? {
+              ...ord,
+              status: newStatus,
+              paidAt:
+                newStatus === "PAID"
+                  ? new Date().toTimeString().slice(0, 5)
+                  : ord.paidAt
+            }
+          : ord
+      )
     );
   };
-  const handleAddProduct = (newProduct) => {
-    setProducts((prev) => [newProduct, ...prev]);
+
+  // Manager: Product Catalog CRUD
+  const handleAddProduct = (newProdData) => {
+    setProducts((prev) => [newProdData, ...prev]);
   };
-  const handleUpdateProduct = (updatedProduct) => {
-    setProducts(
-      (prev) => prev.map((p) => p.id === updatedProduct.id ? updatedProduct : p)
+
+  const handleUpdateProduct = (updatedProd) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === updatedProd.id ? updatedProd : p))
     );
   };
-  const handleDeleteProduct = (productId) => {
-    if (confirm("Are you sure you want to delete this product from the menu?")) {
-      setProducts((prev) => prev.filter((p) => p.id !== productId));
-    }
+
+  const handleDeleteProduct = (prodId) => {
+    setProducts((prev) => prev.filter((p) => p.id !== prodId));
   };
-  const handleToggleProductAvailability = (productId) => {
-    setProducts(
-      (prev) => prev.map((p) => p.id === productId ? { ...p, available: !p.available } : p)
+
+  const handleToggleProductAvailability = (prodId) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === prodId ? { ...p, available: !p.available } : p))
     );
   };
-  const handleAddExpense = (expense) => {
-    setExpenses((prev) => [expense, ...prev]);
+
+  // Manager: Expenses
+  const handleAddExpense = (newExp) => {
+    setExpenses((prev) => [newExp, ...prev]);
   };
-  const handleDeleteExpense = (expenseId) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== expenseId));
+
+  const handleDeleteExpense = (expId) => {
+    setExpenses((prev) => prev.filter((e) => e.id !== expId));
   };
+
+  // Manager: Staff PIN
   const handleUpdateStaffPin = (staffId, newPin) => {
-    setStaff(
-      (prev) => prev.map((s) => s.id === staffId ? { ...s, pin: newPin } : s)
+    setStaff((prev) =>
+      prev.map((s) => (s.id === staffId ? { ...s, pin: newPin } : s))
     );
   };
+
+  // Reset Demo Data
   const handleResetData = () => {
-    if (confirm("Reset all catalog, orders, and expenses to initial state?")) {
+    if (
+      window.confirm(
+        "Reset all orders, products, and expenses back to initial demo seeds?"
+      )
+    ) {
+      localStorage.removeItem("campus_scoop_products");
+      localStorage.removeItem("campus_scoop_orders");
+      localStorage.removeItem("campus_scoop_expenses");
+      localStorage.removeItem("campus_scoop_staff");
       setProducts(INITIAL_PRODUCTS);
       setOrders(INITIAL_ORDERS);
       setExpenses(INITIAL_EXPENSES);
       setStaff(STAFF_MEMBERS);
       setCurrentOrderItems([]);
-      setNextOrderNumber(105);
-      localStorage.clear();
     }
   };
+
+  // Demo Helper: Add Sample Order
   const handleAddSampleOrder = () => {
-    const sampleFlavors = [
-      { name: "Belgian Dark Chocolate", price: 110, category: "ice_cream" },
-      { name: "Wild Strawberry Swirl", price: 115, category: "ice_cream" },
-      { name: "Madagascar Vanilla Bean", price: 95, category: "ice_cream" },
-      { name: "Cold Brew Affogato", price: 140, category: "drinks" }
+    const sampleItems = [
+      {
+        id: `item-${Date.now()}`,
+        productId: `prod-sample-${Date.now()}`,
+        name: "Madagascar Vanilla Bean",
+        category: "ice_cream",
+        scoops: 2,
+        serving: "Waffle Cone",
+        toppings: ["Rainbow Sprinkles", "Hot Fudge"],
+        unitPrice: 95,
+        quantity: 1,
+        totalItemPrice: 165
+      }
     ];
-    const picked = sampleFlavors[Math.floor(Math.random() * sampleFlavors.length)];
-    const orderNum = nextOrderNumber;
-    const sampleItem = {
-      id: `item-${Date.now()}`,
-      productId: `prod-sample-${Date.now()}`,
-      name: picked.name,
-      category: picked.category,
-      scoops: picked.category === "ice_cream" ? 2 : 0,
-      serving: "Cone",
-      toppings: ["Crushed Oreo Crumble"],
-      unitPrice: picked.price + 35,
-      quantity: 2,
-      totalItemPrice: (picked.price + 35) * 2
-    };
-    const subtotal = sampleItem.totalItemPrice;
-    const tax = Math.round(subtotal * 0.05);
-    const total = subtotal + tax;
+
+    const subtotal = 165;
+    const tax = 8;
+    const total = 173;
+
     const newOrder = {
-      id: `ord-${orderNum}`,
-      orderNumber: orderNum,
-      createdAt: "Just now",
-      serverName: "Abebe M.",
-      cashierName: "Dawit K.",
-      items: [sampleItem],
+      id: `ord-${Date.now()}`,
+      orderNumber: nextOrderNumber,
+      createdAt: new Date().toISOString().replace("T", " ").slice(0, 16),
+      serverName: "Walk-in Counter",
+      status: "PENDING",
+      items: sampleItems,
       subtotal,
       tax,
       total,
-      status: "PENDING",
-      paymentMethod: "CHAPA_QR",
-      chapaTxRef: `chapa-tx-${orderNum}-${Math.floor(1e3 + Math.random() * 9e3)}`,
-      customerNote: "Customer waiting at counter"
+      note: "Sample Demo Order"
     };
+
     setOrders((prev) => [newOrder, ...prev]);
-    setNextOrderNumber((prev) => prev + 1);
   };
+
   const pendingOrdersCount = orders.filter((o) => o.status === "PENDING").length;
-  const activeStaffName = currentRole === "server" ? "Bethlehem T. (Server)" : currentRole === "cashier" ? "Dawit K. (Cashier)" : "Prof. Selamawit H. (Manager)";
-  return <div className="min-h-screen bg-[#FFF9F2] text-[#292524] flex flex-col selection:bg-[#F58FA3]/30">
-      
-      {
-    /* Top Header & Role Switcher */
-  }
-      <HeaderNav
-    currentRole={currentRole}
-    onSelectRole={setCurrentRole}
-    pendingOrdersCount={pendingOrdersCount}
-    onResetData={handleResetData}
-    onAddSampleOrder={handleAddSampleOrder}
-    activeStaffName={activeStaffName}
-  />
+  const activeStaffName = "Abebe B. (Server)";
 
-      {
-    /* Main View Area (Conditioned on Selected Role) */
-  }
+  return (
+    <div className="min-h-screen flex flex-col bg-[#FFF9F2] text-[#292524] font-sans antialiased selection:bg-[#E85D75] selection:text-white">
+      {/* Top Navigation Bar matching Desktop/MERN STACK Navbar pattern */}
+      <Navbar
+        pendingOrdersCount={pendingOrdersCount}
+        onResetData={handleResetData}
+        onAddSampleOrder={handleAddSampleOrder}
+        activeStaffName={activeStaffName}
+      />
+
+      {/* Main Routed Page Area */}
       <main className="flex-1">
-        {currentRole === "server" && <ServerView
-    products={products}
-    currentOrderItems={currentOrderItems}
-    onAddToCart={handleAddToCart}
-    onUpdateCartItemQty={handleUpdateCartItemQty}
-    onRemoveCartItem={handleRemoveCartItem}
-    onClearCart={handleClearCart}
-    onSubmitOrder={handleSubmitOrder}
-    recentOrders={orders}
-    nextOrderNumber={nextOrderNumber}
-  />}
-
-        {currentRole === "cashier" && <CashierView
-    orders={orders}
-    onUpdateOrderStatus={handleUpdateOrderStatus}
-  />}
-
-        {currentRole === "manager" && <ManagerView
-    products={products}
-    orders={orders}
-    expenses={expenses}
-    staff={staff}
-    dailySales={DAILY_SALES}
-    monthlySales={MONTHLY_SALES}
-    yearlySales={YEARLY_SALES}
-    onAddProduct={handleAddProduct}
-    onUpdateProduct={handleUpdateProduct}
-    onDeleteProduct={handleDeleteProduct}
-    onToggleProductAvailability={handleToggleProductAvailability}
-    onAddExpense={handleAddExpense}
-    onDeleteExpense={handleDeleteExpense}
-    onUpdateStaffPin={handleUpdateStaffPin}
-  />}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <HomePage
+                products={products}
+                currentOrderItems={currentOrderItems}
+                onAddToCart={handleAddToCart}
+                onUpdateCartItemQty={handleUpdateCartItemQty}
+                onRemoveCartItem={handleRemoveCartItem}
+                onClearCart={handleClearCart}
+                onSubmitOrder={handleSubmitOrder}
+                recentOrders={orders}
+                nextOrderNumber={nextOrderNumber}
+              />
+            }
+          />
+          <Route
+            path="/server"
+            element={
+              <HomePage
+                products={products}
+                currentOrderItems={currentOrderItems}
+                onAddToCart={handleAddToCart}
+                onUpdateCartItemQty={handleUpdateCartItemQty}
+                onRemoveCartItem={handleRemoveCartItem}
+                onClearCart={handleClearCart}
+                onSubmitOrder={handleSubmitOrder}
+                recentOrders={orders}
+                nextOrderNumber={nextOrderNumber}
+              />
+            }
+          />
+          <Route
+            path="/cashier"
+            element={
+              <CashierPage
+                orders={orders}
+                onUpdateOrderStatus={handleUpdateOrderStatus}
+              />
+            }
+          />
+          <Route
+            path="/manager"
+            element={
+              <ManagerPage
+                products={products}
+                orders={orders}
+                expenses={expenses}
+                staff={staff}
+                dailySales={DAILY_SALES}
+                monthlySales={MONTHLY_SALES}
+                yearlySales={YEARLY_SALES}
+                onAddProduct={handleAddProduct}
+                onUpdateProduct={handleUpdateProduct}
+                onDeleteProduct={handleDeleteProduct}
+                onToggleProductAvailability={handleToggleProductAvailability}
+                onAddExpense={handleAddExpense}
+                onDeleteExpense={handleDeleteExpense}
+                onUpdateStaffPin={handleUpdateStaffPin}
+              />
+            }
+          />
+        </Routes>
       </main>
-
-    </div>;
+    </div>
+  );
 }
