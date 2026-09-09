@@ -252,8 +252,8 @@ export const ManagerDashboardTab = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {orders.slice(0, 5).map((ord) => (
-                <tr key={ord.id} className="hover:bg-stone-50">
+              {orders.slice(0, 5).map((ord, idx) => (
+                <tr key={`${ord.id || "recent"}-${idx}`} className="hover:bg-stone-50">
                   <td className="px-3 py-2.5 text-stone-500 font-mono text-[11px]">
                     {ord.createdAt}
                   </td>

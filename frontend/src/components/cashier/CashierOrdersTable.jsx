@@ -22,11 +22,11 @@ export const CashierOrdersTable = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {orders.map((order) => {
+            {orders.map((order, idx) => {
               const isPending = order.status === "PENDING";
               const isPaid = order.status === "PAID";
               return (
-                <tr key={order.id} className="hover:bg-stone-50/70 transition-colors">
+                <tr key={`${order.id || "ord"}-${idx}`} className="hover:bg-stone-50/70 transition-colors">
                   <td className="px-4 py-3.5 font-bold font-mono text-[#5A3E36]">
                     #{order.orderNumber}
                   </td>

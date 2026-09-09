@@ -55,8 +55,8 @@ export const ManagerOrdersTab = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-stone-50">
+              {filteredOrders.map((order, idx) => (
+                <tr key={`${order.id || "mgr-ord"}-${idx}`} className="hover:bg-stone-50">
                   <td className="px-4 py-3 font-bold font-mono text-[#5A3E36]">
                     #{order.orderNumber}
                   </td>

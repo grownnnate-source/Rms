@@ -61,9 +61,9 @@ export const CashierPage = ({ orders = [], onUpdateOrderStatus }) => {
       {/* 3. Orders Display: Cards or Table */}
       {viewMode === "cards" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredOrders.map((order) => (
+          {filteredOrders.map((order, idx) => (
             <CashierOrderCard
-              key={order.id}
+              key={`${order.id || "card"}-${idx}`}
               order={order}
               onGeneratePayment={setSelectedPaymentOrder}
               onPrintReceipt={setSelectedReceiptOrder}
