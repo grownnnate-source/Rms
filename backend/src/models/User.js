@@ -1,9 +1,8 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema(
   {
-    // Staff member's display name (e.g., 'Sarah Jenkins')
+    // Staff member's display name (e.g., 'Abebe Tadesse')
     name: {
       type: String,
       required: true,
@@ -15,11 +14,12 @@ const userSchema = new mongoose.Schema(
       required: true,
       enum: ['attendant', 'cashier', 'manager']
     },
-    // Unique 4-digit PIN (stored as bcrypt hash, never plaintext)
+    // Unique 4-digit PIN
     pin: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
+      maxlength: 4
     },
     // Allows manager to disable staff access without deleting history
     isActive: {
@@ -32,16 +32,9 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Pre-save hook: Hashes PIN with bcrypt before saving to MongoDB
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('pin')) return next();
-  this.pin = await bcrypt.hash(this.pin, 10);
-  next();
-});
-
-// Method: Compares user entered PIN against the hashed PIN in DB
-userSchema.methods.matchPin = async function (enteredPin) {
-  return await bcrypt.compare(enteredPin, this.pin);
+// Method: Compares user entered PIN against stored PIN
+userSchema.methods.matchPin = function (enteredPin) {
+  return enteredPin === this.pin;
 };
 
 // Mongoose creates the 'users' collection in MongoDB

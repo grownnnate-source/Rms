@@ -1,677 +1,177 @@
-import { useState, useEffect } from "react";
-import { Routes, Route, useLocation, useNavigate } from "react-router";
-import {
-  loginWithPin,
-  fetchProducts as apiFetchProducts,
-  createProduct as apiCreateProduct,
-  toggleProductAvailability as apiToggleProductAvailability,
-  createOrder as apiCreateOrder,
-  fetchOrders as apiFetchOrders,
-  updateOrderStatus as apiUpdateOrderStatus,
-  fetchExpenses as apiFetchExpenses,
-  createExpense as apiCreateExpense,
-  deleteExpense as apiDeleteExpense,
-  socket
-} from "./lib/axios";
-import {
-  INITIAL_PRODUCTS,
-  INITIAL_ORDERS,
-  INITIAL_EXPENSES,
-  DAILY_SALES,
-  MONTHLY_SALES,
-  YEARLY_SALES,
-  STAFF_MEMBERS
-} from "./lib/mockData";
+import { useState, useEffect, useMemo } from "react";
+import { Routes, Route, useLocation, useNavigate, Navigate } from "react-router";
+import { IceCream } from "lucide-react";
+import * as api from "./lib/axios";
+import { socket } from "./lib/axios";
+import { normalizeProduct, normalizeOrder, upsertOrder, computeChartData, addToCart, updateCartQty, formatOrderItems, createFallbackOrder } from "./lib/dataUtils";
 import { Navbar } from "./components/Navbar";
 import { HomePage } from "./pages/HomePage";
 import { CashierPage } from "./pages/CashierPage";
 import { ManagerPage } from "./pages/ManagerPage";
 import { LoginPage } from "./pages/LoginPage";
 
-function getIconForProduct(name = "", category = "") {
-  const n = name.toLowerCase();
-  const c = category.toLowerCase();
-  if (n.includes("chocolate") || n.includes("chip") || n.includes("oreo")) return "Cookie";
-  if (n.includes("vanilla") || n.includes("caramel")) return "IceCream";
-  if (n.includes("strawberry") || n.includes("berry")) return "Sparkles";
-  if (n.includes("mango") || n.includes("passion")) return "Sun";
-  if (n.includes("mint") || n.includes("matcha")) return "Leaf";
-  if (n.includes("coffee") || n.includes("mocha")) return "Coffee";
-  if (c.includes("cone")) return "Cookie";
-  if (c.includes("cup")) return "Package";
-  if (c.includes("topping")) return "Sparkles";
-  if (c.includes("drink")) return "GlassWater";
-  return "IceCream";
-}
-
-function getColorAccentForProduct(name = "", category = "") {
-  const n = name.toLowerCase();
-  if (n.includes("chocolate") || n.includes("oreo") || n.includes("mocha")) return "#5A3E36";
-  if (n.includes("vanilla")) return "#F6E05E";
-  if (n.includes("strawberry")) return "#F58FA3";
-  if (n.includes("mango") || n.includes("passion")) return "#EA580C";
-  if (n.includes("mint")) return "#65A30D";
-  if (n.includes("caramel")) return "#D97706";
-  if (n.includes("sprinkles") || n.includes("m&m")) return "#E85D75";
-  if (category.toLowerCase().includes("cone")) return "#D97706";
-  if (category.toLowerCase().includes("cup")) return "#78716C";
-  return "#5A3E36";
-}
-
-function normalizeProduct(p) {
-  const cat = (p.category || "ice_cream").toLowerCase().replace(/\s+/g, "_");
-  return {
-    id: p._id || p.id,
-    name: p.name,
-    category: cat,
-    description: p.description || "",
-    price: Number(p.price) || 0,
-    available: p.isAvailable !== undefined ? Boolean(p.isAvailable) : (p.available !== undefined ? Boolean(p.available) : true),
-    iconName: p.iconName || getIconForProduct(p.name, cat),
-    colorAccent: p.colorAccent || getColorAccentForProduct(p.name, cat),
-    badge: p.badge || (Number(p.price) >= 270 ? "Bestseller" : ""),
-    scoopsDefault: p.scoopsDefault || 1,
-    sizes: Array.isArray(p.sizes) ? p.sizes : []
-  };
-}
-
-function normalizeOrder(o) {
-  if (!o) return null;
-  const numericOrderNum = typeof o.orderNumber === "string"
-    ? parseInt(o.orderNumber.replace(/[^0-9]/g, ""), 10) || 101
-    : (Number(o.orderNumber) || 101);
-
-  const rawStatus = o.status || "PENDING";
-  const status = rawStatus === "CREATED" || rawStatus === "PAYMENT_PENDING" ? "PENDING" : rawStatus;
-
-  const items = (o.items || []).map((i) => ({
-    id: String(i._id || i.id || `item-${Math.random().toString(36).substring(2, 6)}`),
-    productId: i.product || i.productId,
-    name: i.name,
-    category: i.category || "ice_cream",
-    scoops: i.options?.scoops || 1,
-    serving: i.options?.containerType || "Cup",
-    toppings: i.options?.toppings || [],
-    unitPrice: Number(i.unitPrice) || 0,
-    quantity: Number(i.quantity) || 1,
-    totalItemPrice: Number(i.itemTotal) || ((Number(i.unitPrice) || 0) * (Number(i.quantity) || 1))
-  }));
-
-  const total = Number(o.totalAmount || o.total) || 0;
-  // 15% VAT calculation
-  const subtotal = o.subtotal ? Number(o.subtotal) : Math.round(total / 1.15);
-  const tax = o.tax ? Number(o.tax) : total - subtotal;
-
-  let createdAt = new Date().toISOString().replace("T", " ").slice(0, 16);
-  if (o.createdAt) {
-    try {
-      createdAt = new Date(o.createdAt).toISOString().replace("T", " ").slice(0, 16);
-    } catch {
-      createdAt = String(o.createdAt);
-    }
-  }
-
-  const orderId = String(o._id || o.id || `ord-${numericOrderNum}`);
-
-  return {
-    id: orderId,
-    orderNumber: numericOrderNum,
-    createdAt,
-    serverName: o.attendant?.name || o.serverName || "Abebe Tadesse (Server)",
-    cashierName: o.cashierName || "Sara Hailu (Cashier)",
-    status,
-    items,
-    subtotal,
-    tax,
-    total,
-    paymentMethod: o.payment?.paymentMethod || o.paymentMethod || "CHAPA_QR",
-    chapaTxRef: o.payment?.txRef || o.chapaTxRef || `RMS-${numericOrderNum}-${Date.now()}`,
-    customerNote: o.customerNote || o.note || ""
-  };
-}
-
-function upsertOrder(prevOrders, rawNewOrder) {
-  const normalized = normalizeOrder(rawNewOrder);
-  if (!normalized) return prevOrders;
-
-  const targetId = String(normalized.id || "");
-  const targetNum = Number(normalized.orderNumber) || 0;
-
-  const existsIndex = prevOrders.findIndex((o) => {
-    const oId = String(o.id || "");
-    const oNum = Number(o.orderNumber) || 0;
-    return (targetId && oId === targetId) || (targetNum > 0 && oNum === targetNum);
-  });
-
-  if (existsIndex >= 0) {
-    const copy = [...prevOrders];
-    copy[existsIndex] = { ...copy[existsIndex], ...normalized };
-    return copy;
-  }
-
-  return [normalized, ...prevOrders];
+function ProtectedRoute({ user, allowedRoles, children }) {
+  if (!user) return <Navigate to="/login" replace />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to={`/${user.role}`} replace />;
+  return children;
 }
 
 export default function App() {
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
-  const [expenses, setExpenses] = useState(INITIAL_EXPENSES);
-  const [staff, setStaff] = useState(STAFF_MEMBERS);
+  const [products, setProducts] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [currentOrderItems, setCurrentOrderItems] = useState([]);
-  const [isLiveBackend, setIsLiveBackend] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const stored = localStorage.getItem("rms_user");
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+      const t = localStorage.getItem("rms_jwt_token"), u = localStorage.getItem("rms_user");
+      return t && u ? JSON.parse(u) : null;
+    } catch { return null; }
   });
 
-  const handleLoginSuccess = (user) => {
-    setCurrentUser(user);
-  };
+  const [isAuthChecking, setIsAuthChecking] = useState(() => Boolean(localStorage.getItem("rms_jwt_token")) && !localStorage.getItem("rms_user"));
 
   const handleLogout = () => {
     localStorage.removeItem("rms_jwt_token");
     localStorage.removeItem("rms_user");
     setCurrentUser(null);
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
-  // Role Authentication Synchronization across routes
   useEffect(() => {
-    async function syncRoleAuth() {
-      const path = location.pathname;
-      if (path === "/login") return; // Do not auto-authenticate on login page
-
-      let targetPin = "1111";
-      let targetRole = "attendant";
-
-      if (path === "/cashier") {
-        targetPin = "2222";
-        targetRole = "cashier";
-      } else if (path === "/manager") {
-        targetPin = "9999";
-        targetRole = "manager";
+    let active = true;
+    async function init() {
+      if (!localStorage.getItem("rms_jwt_token")) {
+        if (active) { setCurrentUser(null); setIsAuthChecking(false); }
+        return;
+      }
+      try {
+        const auth = await api.fetchCurrentStaff();
+        if (active && auth?.user) { setCurrentUser(auth.user); localStorage.setItem("rms_user", JSON.stringify(auth.user)); }
+      } catch (err) {
+        if (err.response?.status === 401) { handleLogout(); return; }
+      } finally {
+        if (active) setIsAuthChecking(false);
       }
 
       try {
-        const authData = await loginWithPin(targetPin, targetRole);
-        setIsLiveBackend(true);
-        if (authData?.user) {
-          setCurrentUser(authData.user);
+        const [prods, ords] = await Promise.all([api.fetchProducts(), api.fetchOrders()]);
+        if (active) {
+          if (Array.isArray(prods)) setProducts(prods.map(normalizeProduct));
+          if (Array.isArray(ords)) setOrders(ords.map(normalizeOrder));
         }
-
-        if (path === "/manager") {
-          const liveExpenses = await apiFetchExpenses();
-          if (Array.isArray(liveExpenses) && liveExpenses.length > 0) {
-            setExpenses(liveExpenses);
-          }
-        }
-      } catch (e) {
-        console.warn(`Role auth sync for ${targetRole} fallback:`, e.message);
-      }
+      } catch (e) { console.warn("Init fetch error:", e.message); }
     }
 
-    syncRoleAuth();
-  }, [location.pathname]);
-
-  // Initialize Session, Connect to Live Backend & MongoDB Atlas
-  useEffect(() => {
-    let isSubscribed = true;
-
-    async function initializeSystem() {
-      // 1. Ensure valid JWT Token for backend requests
-      let token = localStorage.getItem("rms_jwt_token");
-      if (!token) {
-        try {
-          const auth = await loginWithPin("1111", "attendant");
-          token = auth.token;
-        } catch (authErr) {
-          console.warn("Backend auth offline, using local fallback mode:", authErr.message);
-        }
-      }
-
-      // 2. Fetch Live Products from MongoDB
-      try {
-        const liveProds = await apiFetchProducts();
-        if (isSubscribed && Array.isArray(liveProds) && liveProds.length > 0) {
-          setProducts(liveProds.map(normalizeProduct));
-          setIsLiveBackend(true);
-        }
-      } catch (err) {
-        console.warn("Live products fetch fallback:", err.message);
-      }
-
-      // 3. Fetch Live Orders from MongoDB
-      try {
-        const liveOrders = await apiFetchOrders();
-        if (isSubscribed && Array.isArray(liveOrders) && liveOrders.length > 0) {
-          setOrders((prev) => {
-            let merged = [...prev];
-            liveOrders.forEach((lo) => {
-              merged = upsertOrder(merged, lo);
-            });
-            return merged;
-          });
-        }
-      } catch (err) {
-        console.warn("Live orders fetch fallback:", err.message);
-      }
-    }
-
-    initializeSystem();
-
-    // Socket.IO Real-Time Listeners
-    socket.on("order:created", (newBackendOrder) => {
-      setOrders((prev) => upsertOrder(prev, newBackendOrder));
-    });
-
-    socket.on("order:paid", ({ orderId }) => {
-      setOrders((prev) =>
-        prev.map((o) =>
-          String(o.id) === String(orderId)
-            ? { ...o, status: "PAID", paidAt: new Date().toTimeString().slice(0, 5) }
-            : o
-        )
-      );
-    });
-
-    socket.on("order:updated", (updatedBackendOrder) => {
-      setOrders((prev) => upsertOrder(prev, updatedBackendOrder));
-    });
+    init();
+    socket.on("order:created", (o) => setOrders((prev) => upsertOrder(prev, o)));
+    socket.on("order:paid", ({ orderId }) => setOrders((prev) => prev.map((o) => (String(o.id) === String(orderId) ? { ...o, status: "PAID", paidAt: new Date().toTimeString().slice(0, 5) } : o))));
+    socket.on("order:updated", (o) => setOrders((prev) => upsertOrder(prev, o)));
 
     return () => {
-      isSubscribed = false;
+      active = false;
       socket.off("order:created");
       socket.off("order:paid");
       socket.off("order:updated");
     };
-  }, []);
+  }, [navigate]);
 
-  // Order Number Generator Sequence
-  const nextOrderNumber =
-    orders.length > 0
-      ? Math.max(...orders.map((o) => o.orderNumber || 0)) + 1
-      : 101;
+  useEffect(() => {
+    if (currentUser?.role === "manager") {
+      api.fetchStaff().then((d) => Array.isArray(d) && setStaff(d)).catch(() => {});
+      api.fetchExpenses().then((d) => Array.isArray(d) && setExpenses(d)).catch(() => {});
+    }
+  }, [currentUser?.role]);
 
-  // Cart Management Handlers
-  const handleAddToCart = (newItem) => {
-    setCurrentOrderItems((prev) => {
-      const existingIdx = prev.findIndex(
-        (i) =>
-          i.productId === newItem.productId &&
-          i.serving === newItem.serving &&
-          i.scoops === newItem.scoops &&
-          JSON.stringify(i.toppings.slice().sort()) ===
-            JSON.stringify(newItem.toppings.slice().sort())
-      );
+  const nextOrderNumber = orders.length > 0 ? Math.max(...orders.map((o) => o.orderNumber || 0)) + 1 : 101;
 
-      if (existingIdx > -1) {
-        const updated = [...prev];
-        const item = updated[existingIdx];
-        const newQty = item.quantity + newItem.quantity;
-        const perUnitPrice = item.totalItemPrice / item.quantity;
-        updated[existingIdx] = {
-          ...item,
-          quantity: newQty,
-          totalItemPrice: perUnitPrice * newQty
-        };
-        return updated;
-      }
+  const handleAddToCart = (item) => setCurrentOrderItems((prev) => addToCart(prev, item));
+  const handleUpdateCartItemQty = (idx, delta) => setCurrentOrderItems((prev) => updateCartQty(prev, idx, delta));
+  const handleRemoveCartItem = (idx) => setCurrentOrderItems((prev) => prev.filter((_, i) => i !== idx));
+  const handleClearCart = () => setCurrentOrderItems([]);
 
-      return [...prev, newItem];
-    });
-  };
-
-  const handleUpdateCartItemQty = (index, delta) => {
-    setCurrentOrderItems((prev) => {
-      const updated = [...prev];
-      const item = updated[index];
-      const newQty = item.quantity + delta;
-
-      if (newQty <= 0) {
-        return prev.filter((_, idx) => idx !== index);
-      }
-
-      const perUnitPrice = item.totalItemPrice / item.quantity;
-      updated[index] = {
-        ...item,
-        quantity: newQty,
-        totalItemPrice: perUnitPrice * newQty
-      };
-      return updated;
-    });
-  };
-
-  const handleRemoveCartItem = (index) => {
-    setCurrentOrderItems((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const handleClearCart = () => {
-    setCurrentOrderItems([]);
-  };
-
-  // Submit Order from Server -> Backend + Cashier
   const handleSubmitOrder = async (note = "") => {
     if (currentOrderItems.length === 0) return null;
-
-    // Format items for MongoDB Order Schema
-    const firstValidMongoId = products.find((p) => /^[0-9a-fA-F]{24}$/.test(p.id))?.id;
-    const formattedItems = currentOrderItems.map((item) => {
-      const isMongoId = /^[0-9a-fA-F]{24}$/.test(item.productId);
-      return {
-        product: isMongoId ? item.productId : (firstValidMongoId || item.productId),
-        name: item.name,
-        unitPrice: item.unitPrice,
-        quantity: item.quantity,
-        options: {
-          scoops: item.scoops || 1,
-          containerType: item.serving === "Cone" ? "Cone" : "Cup",
-          toppings: item.toppings || []
-        }
-      };
-    });
-
+    let newOrder;
     try {
-      const createdOrder = await apiCreateOrder(formattedItems, note);
-      if (createdOrder) {
-        const normalized = normalizeOrder(createdOrder);
-        setOrders((prev) => upsertOrder(prev, normalized));
-        setCurrentOrderItems([]);
-        return normalized;
-      }
-    } catch (err) {
-      console.warn("Backend order creation fallback to local:", err.message);
-    }
-
-    // Local fallback if backend temporarily unreachable
-    const subtotal = currentOrderItems.reduce((sum, item) => sum + item.totalItemPrice, 0);
-    const tax = Math.round(subtotal * 0.15);
-    const total = subtotal + tax;
-    const now = new Date();
-    const formattedDate = `${now.toISOString().split("T")[0]} ${now.toTimeString().split(" ")[0].slice(0, 5)}`;
-
-    const fallbackOrder = {
-      id: `ord-${Date.now()}`,
-      orderNumber: nextOrderNumber,
-      createdAt: formattedDate,
-      serverName: "Abebe Tadesse (Server)",
-      cashierName: "Sara Hailu (Cashier)",
-      status: "PENDING",
-      items: [...currentOrderItems],
-      subtotal,
-      tax,
-      total,
-      paymentMethod: "CHAPA_QR",
-      chapaTxRef: `RMS-${nextOrderNumber}-${Date.now()}`,
-      customerNote: note.trim()
-    };
-
-    setOrders((prev) => upsertOrder(prev, fallbackOrder));
-    setCurrentOrderItems([]);
-    return fallbackOrder;
-  };
-
-  // Cashier: Update Order Status
-  const handleUpdateOrderStatus = async (orderId, newStatus) => {
-    try {
-      if (/^[0-9a-fA-F]{24}$/.test(orderId)) {
-        await apiUpdateOrderStatus(orderId, newStatus === "PAID" ? "PAID" : newStatus);
-      }
-    } catch (e) {
-      console.warn("Backend updateOrderStatus fallback:", e.message);
-    }
-
-    setOrders((prev) =>
-      prev.map((ord) =>
-        ord.id === orderId
-          ? {
-              ...ord,
-              status: newStatus,
-              paidAt: newStatus === "PAID" ? new Date().toTimeString().slice(0, 5) : ord.paidAt
-            }
-          : ord
-      )
-    );
-  };
-
-  // Manager: Product Catalog CRUD
-  const handleAddProduct = async (newProdData) => {
-    try {
-      const created = await apiCreateProduct({
-        name: newProdData.name,
-        category: newProdData.category === "ice_cream" ? "Ice Cream" : newProdData.category,
-        description: newProdData.description,
-        price: newProdData.price,
-        isAvailable: true
-      });
-      if (created) {
-        setProducts((prev) => [normalizeProduct(created), ...prev]);
-        return;
-      }
-    } catch (e) {
-      console.warn("Backend createProduct fallback:", e.message);
-    }
-    setProducts((prev) => [newProdData, ...prev]);
-  };
-
-  const handleUpdateProduct = (updatedProd) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === updatedProd.id ? updatedProd : p))
-    );
-  };
-
-  const handleDeleteProduct = (prodId) => {
-    setProducts((prev) => prev.filter((p) => p.id !== prodId));
-  };
-
-  const handleToggleProductAvailability = async (prodId) => {
-    const prod = products.find((p) => p.id === prodId);
-    const newStatus = !prod?.available;
-
-    try {
-      if (/^[0-9a-fA-F]{24}$/.test(prodId)) {
-        await apiToggleProductAvailability(prodId, newStatus);
-      }
-    } catch (e) {
-      console.warn("Backend toggleProductAvailability fallback:", e.message);
-    }
-
-    setProducts((prev) =>
-      prev.map((p) => (p.id === prodId ? { ...p, available: newStatus } : p))
-    );
-  };
-
-  // Manager: Expenses
-  const handleAddExpense = async (newExp) => {
-    try {
-      const created = await apiCreateExpense({
-        title: newExp.title,
-        category: newExp.category,
-        amount: newExp.amount
-      });
-      if (created) {
-        setExpenses((prev) => [created, ...prev]);
-        return;
-      }
-    } catch (e) {
-      console.warn("Backend createExpense fallback:", e.message);
-    }
-    setExpenses((prev) => [newExp, ...prev]);
-  };
-
-  const handleDeleteExpense = async (expId) => {
-    try {
-      if (/^[0-9a-fA-F]{24}$/.test(expId)) {
-        await apiDeleteExpense(expId);
-      }
-    } catch (e) {
-      console.warn("Backend deleteExpense fallback:", e.message);
-    }
-    setExpenses((prev) => prev.filter((e) => (e._id || e.id) !== expId));
-  };
-
-  // Manager: Staff PIN
-  const handleUpdateStaffPin = (staffId, newPin) => {
-    setStaff((prev) =>
-      prev.map((s) => (s.id === staffId ? { ...s, pin: newPin } : s))
-    );
-  };
-
-  // Reset Demo Data
-  const handleResetData = () => {
-    if (
-      window.confirm(
-        "Reset all orders, products, and expenses back to initial demo seeds?"
-      )
-    ) {
-      setProducts(INITIAL_PRODUCTS);
-      setOrders(INITIAL_ORDERS);
-      setExpenses(INITIAL_EXPENSES);
-      setStaff(STAFF_MEMBERS);
-      setCurrentOrderItems([]);
-    }
-  };
-
-  // Demo Helper: Add Sample Order
-  const handleAddSampleOrder = () => {
-    const sampleItems = [
-      {
-        id: `item-${Date.now()}`,
-        productId: products[0]?.id || `prod-sample-${Date.now()}`,
-        name: products[0]?.name || "Madagascar Vanilla Bean",
-        category: "ice_cream",
-        scoops: 2,
-        serving: "Waffle Cone",
-        toppings: ["Rainbow Sprinkles", "Hot Fudge"],
-        unitPrice: products[0]?.price || 250,
-        quantity: 1,
-        totalItemPrice: (products[0]?.price || 250) + 70
-      }
-    ];
-
-    const subtotal = (products[0]?.price || 250) + 70;
-    const tax = Math.round(subtotal * 0.15);
-    const total = subtotal + tax;
-
-    const newOrder = {
-      id: `ord-${Date.now()}`,
-      orderNumber: nextOrderNumber,
-      createdAt: new Date().toISOString().replace("T", " ").slice(0, 16),
-      serverName: "Walk-in Counter",
-      status: "PENDING",
-      items: sampleItems,
-      subtotal,
-      tax,
-      total,
-      paymentMethod: "CHAPA_QR",
-      chapaTxRef: `RMS-${nextOrderNumber}-${Date.now()}`,
-      customerNote: "Sample Demo Order"
-    };
-
+      const items = formatOrderItems(currentOrderItems, products);
+      const created = await api.createOrder(items, note);
+      if (created) newOrder = normalizeOrder(created);
+    } catch (e) { console.warn("Order err:", e.message); }
+    if (!newOrder) newOrder = createFallbackOrder(currentOrderItems, nextOrderNumber, currentUser?.name, note);
     setOrders((prev) => upsertOrder(prev, newOrder));
+    setCurrentOrderItems([]);
+    return newOrder;
   };
 
-  const pendingOrdersCount = orders.filter((o) => o.status === "PENDING").length;
-
-  const getActiveStaffName = () => {
-    if (location.pathname === "/cashier") {
-      return isLiveBackend ? "Sara Hailu (Cashier • Live)" : "Sara Hailu (Cashier)";
-    }
-    if (location.pathname === "/manager") {
-      return isLiveBackend ? "Dawit Bekele (Manager • Live)" : "Dawit Bekele (Manager)";
-    }
-    return isLiveBackend ? "Abebe Tadesse (Attendant • Live)" : "Abebe Tadesse (Server)";
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    if (/^[0-9a-fA-F]{24}$/.test(orderId)) api.updateOrderStatus(orderId, newStatus).catch(console.warn);
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus, paidAt: newStatus === "PAID" ? new Date().toTimeString().slice(0, 5) : o.paidAt } : o)));
   };
 
-  const activeStaffName = getActiveStaffName();
+  const handleAddProduct = async (p) => {
+    const c = await api.createProduct({ ...p, category: p.category === "ice_cream" ? "Ice Cream" : p.category, isAvailable: true }).catch(console.warn);
+    setProducts((prev) => [c ? normalizeProduct(c) : p, ...prev]);
+  };
+  const handleUpdateProduct = (u) => setProducts((prev) => prev.map((p) => (p.id === u.id ? u : p)));
+  const handleDeleteProduct = (id) => setProducts((prev) => prev.filter((p) => p.id !== id));
+  const handleToggleProductAvailability = (id) => {
+    const next = !products.find((p) => p.id === id)?.available;
+    if (/^[0-9a-fA-F]{24}$/.test(id)) api.toggleProductAvailability(id, next).catch(console.warn);
+    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, available: next } : p)));
+  };
+
+  const handleAddExpense = async (e) => {
+    const c = await api.createExpense(e).catch(console.warn);
+    setExpenses((prev) => [c || e, ...prev]);
+  };
+  const handleDeleteExpense = (id) => {
+    if (/^[0-9a-fA-F]{24}$/.test(id)) api.deleteExpense(id).catch(console.warn);
+    setExpenses((prev) => prev.filter((e) => (e._id || e.id) !== id));
+  };
+
+  const handleUpdateStaffPin = async (id, pin) => {
+    try {
+      await api.updateStaffPinApi(id, pin);
+      setStaff((prev) => prev.map((s) => (s.id === id ? { ...s, pin } : s)));
+    } catch (e) { alert(e.response?.data?.message || "Failed to update PIN"); }
+  };
+
+  const paidOrders = useMemo(() => orders.filter((o) => o.status === "PAID"), [orders]);
+  const dailySales = useMemo(() => computeChartData(paidOrders, "Daily"), [paidOrders]);
+  const monthlySales = useMemo(() => computeChartData(paidOrders, "Monthly"), [paidOrders]);
+  const yearlySales = useMemo(() => computeChartData(paidOrders, "Yearly"), [paidOrders]);
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#FFF9F2] text-[#5A3E36]">
+        <div className="w-14 h-14 rounded-2xl bg-[#5A3E36] text-[#FFF9F2] flex items-center justify-center shadow-md animate-pulse mb-3">
+          <IceCream className="w-7 h-7 text-[#F58FA3]" />
+        </div>
+        <p className="font-bold text-sm tracking-wide text-[#5A3E36]">Campus Scoop POS</p>
+        <p className="text-xs text-[#78716C] mt-1">Verifying staff terminal session...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FFF9F2] text-[#292524] font-sans antialiased selection:bg-[#E85D75] selection:text-white">
-      {/* Top Navigation Bar matching Desktop/MERN STACK Navbar pattern */}
-      <Navbar
-        pendingOrdersCount={pendingOrdersCount}
-        onResetData={handleResetData}
-        onAddSampleOrder={handleAddSampleOrder}
-        activeStaffName={activeStaffName}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-      />
+      {currentUser && location.pathname !== "/login" && (
+        <Navbar pendingOrdersCount={orders.filter((o) => o.status === "PENDING").length} activeStaffName={currentUser.name ? `${currentUser.name} (${currentUser.role})` : "Staff User"} currentUser={currentUser} onLogout={handleLogout} />
+      )}
 
-      {/* Main Routed Page Area */}
       <main className="flex-1">
         <Routes>
-          <Route
-            path="/login"
-            element={<LoginPage onLoginSuccess={handleLoginSuccess} />}
-          />
-          <Route
-            path="/"
-            element={
-              <HomePage
-                products={products}
-                currentOrderItems={currentOrderItems}
-                onAddToCart={handleAddToCart}
-                onUpdateCartItemQty={handleUpdateCartItemQty}
-                onRemoveCartItem={handleRemoveCartItem}
-                onClearCart={handleClearCart}
-                onSubmitOrder={handleSubmitOrder}
-                recentOrders={orders}
-                nextOrderNumber={nextOrderNumber}
-              />
-            }
-          />
-          <Route
-            path="/server"
-            element={
-              <HomePage
-                products={products}
-                currentOrderItems={currentOrderItems}
-                onAddToCart={handleAddToCart}
-                onUpdateCartItemQty={handleUpdateCartItemQty}
-                onRemoveCartItem={handleRemoveCartItem}
-                onClearCart={handleClearCart}
-                onSubmitOrder={handleSubmitOrder}
-                recentOrders={orders}
-                nextOrderNumber={nextOrderNumber}
-              />
-            }
-          />
-          <Route
-            path="/cashier"
-            element={
-              <CashierPage
-                orders={orders}
-                onUpdateOrderStatus={handleUpdateOrderStatus}
-              />
-            }
-          />
-          <Route
-            path="/manager"
-            element={
-              <ManagerPage
-                products={products}
-                orders={orders}
-                expenses={expenses}
-                staff={staff}
-                dailySales={DAILY_SALES}
-                monthlySales={MONTHLY_SALES}
-                yearlySales={YEARLY_SALES}
-                onAddProduct={handleAddProduct}
-                onUpdateProduct={handleUpdateProduct}
-                onDeleteProduct={handleDeleteProduct}
-                onToggleProductAvailability={handleToggleProductAvailability}
-                onAddExpense={handleAddExpense}
-                onDeleteExpense={handleDeleteExpense}
-                onUpdateStaffPin={handleUpdateStaffPin}
-              />
-            }
-          />
+          <Route path="/login" element={currentUser ? <Navigate to={`/${currentUser.role}`} replace /> : <LoginPage onLoginSuccess={setCurrentUser} />} />
+          <Route path="/" element={<Navigate to={currentUser ? `/${currentUser.role}` : "/login"} replace />} />
+          <Route path="/server" element={<Navigate to="/attendant" replace />} />
+          <Route path="/attendant" element={<ProtectedRoute user={currentUser} allowedRoles={["attendant", "manager"]}><HomePage products={products} currentOrderItems={currentOrderItems} onAddToCart={handleAddToCart} onUpdateCartItemQty={handleUpdateCartItemQty} onRemoveCartItem={handleRemoveCartItem} onClearCart={handleClearCart} onSubmitOrder={handleSubmitOrder} recentOrders={orders} nextOrderNumber={nextOrderNumber} /></ProtectedRoute>} />
+          <Route path="/cashier" element={<ProtectedRoute user={currentUser} allowedRoles={["cashier", "manager"]}><CashierPage orders={orders} onUpdateOrderStatus={handleUpdateOrderStatus} /></ProtectedRoute>} />
+          <Route path="/manager" element={<ProtectedRoute user={currentUser} allowedRoles={["manager"]}><ManagerPage products={products} orders={orders} expenses={expenses} staff={staff} dailySales={dailySales} monthlySales={monthlySales} yearlySales={yearlySales} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onDeleteProduct={handleDeleteProduct} onToggleProductAvailability={handleToggleProductAvailability} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onUpdateStaffPin={handleUpdateStaffPin} /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to={currentUser ? `/${currentUser.role}` : "/login"} replace />} />
         </Routes>
       </main>
     </div>

@@ -4,34 +4,36 @@ import { io } from "socket.io-client";
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3000";
 
-// Axios instance matching MERN STACK pattern with JWT interceptor
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json"
-  },
+  headers: { "Content-Type": "application/json" },
   timeout: 10000
 });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("rms_jwt_token");
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    if (config.headers?.set) config.headers.set("Authorization", `Bearer ${token}`);
+    else config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// Socket.IO singleton instance
-export const socket = io(SOCKET_URL, {
-  autoConnect: true,
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000
-});
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem("rms_jwt_token");
+      localStorage.removeItem("rms_user");
+    }
+    return Promise.reject(err);
+  }
+);
 
-// Authentication
+export const socket = io(SOCKET_URL, { autoConnect: true, reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000 });
+
 export async function loginWithPin(pin, role) {
-  const res = await api.post("/auth/pin-login", { pin, role });
+  const res = await api.post("/auth/pin-login", role ? { pin, role } : { pin });
   if (res.data.token) {
     localStorage.setItem("rms_jwt_token", res.data.token);
     localStorage.setItem("rms_user", JSON.stringify(res.data.user));
@@ -39,95 +41,25 @@ export async function loginWithPin(pin, role) {
   return res.data;
 }
 
-export async function fetchCurrentStaff() {
-  const res = await api.get("/auth/me");
-  return res.data;
-}
+export const fetchCurrentStaff = () => api.get("/auth/me").then((r) => r.data);
+export const fetchStaff = () => api.get("/auth/staff").then((r) => r.data.staff);
+export const updateStaffPinApi = (id, pin) => api.patch(`/auth/staff/${id}/pin`, { pin }).then((r) => r.data);
 
-// Products
-export async function fetchProducts(category) {
-  const params = category && category !== "all" ? { category } : {};
-  const res = await api.get("/products", { params });
-  return res.data.products;
-}
+export const fetchProducts = (category) => api.get("/products", { params: category && category !== "all" ? { category } : {} }).then((r) => r.data.products);
+export const toggleProductAvailability = (id, isAvailable) => api.patch(`/products/${id}/availability`, { isAvailable }).then((r) => r.data.product);
+export const createProduct = (data) => api.post("/products", data).then((r) => r.data.product);
 
-export async function toggleProductAvailability(productId, isAvailable) {
-  const res = await api.patch(`/products/${productId}/availability`, { isAvailable });
-  return res.data.product;
-}
+export const createOrder = (items, note = "") => api.post("/orders", { items, note }).then((r) => r.data.order);
+export const fetchOrders = (status) => api.get("/orders", { params: status ? { status } : {} }).then((r) => r.data.orders);
+export const updateOrderStatus = (id, status) => api.patch(`/orders/${id}/status`, { status }).then((r) => r.data.order);
 
-export async function createProduct(productData) {
-  const res = await api.post("/products", productData);
-  return res.data.product;
-}
+export const initializePayment = (id) => api.post(`/payments/initialize/${id}`).then((r) => r.data);
+export const verifyPayment = (txRef, simulate = true) => api.get(`/payments/verify/${txRef}`, { params: { simulate: simulate ? "true" : "false" } }).then((r) => r.data);
+export const processCashPayment = (id) => api.post(`/payments/cash/${id}`).then((r) => r.data);
 
-// Orders
-export async function createOrder(items, note = "") {
-  const res = await api.post("/orders", { items, note });
-  return res.data.order;
-}
-
-export async function fetchOrders(status) {
-  const params = status ? { status } : {};
-  const res = await api.get("/orders", { params });
-  return res.data.orders;
-}
-
-export async function updateOrderStatus(orderId, status) {
-  const res = await api.patch(`/orders/${orderId}/status`, { status });
-  return res.data.order;
-}
-
-// Payments
-export async function initializePayment(orderId) {
-  const res = await api.post(`/payments/initialize/${orderId}`);
-  return res.data;
-}
-
-export async function verifyPayment(txRef, simulate = true) {
-  const res = await api.get(`/payments/verify/${txRef}`, {
-    params: { simulate: simulate ? "true" : "false" }
-  });
-  return res.data;
-}
-
-export async function processCashPayment(orderId) {
-  const res = await api.post(`/payments/cash/${orderId}`);
-  return res.data;
-}
-
-// Expenses
-export async function fetchExpenses(category) {
-  const params = category ? { category } : {};
-  const res = await api.get("/expenses", { params });
-  return res.data.expenses;
-}
-
-export async function createExpense(expenseData) {
-  const res = await api.post("/expenses", expenseData);
-  return res.data.expense;
-}
-
-export async function deleteExpense(expenseId) {
-  const res = await api.delete(`/expenses/${expenseId}`);
-  return res.data;
-}
-
-// Analytics
-export async function fetchFinancialSummary(period = "today") {
-  const res = await api.get("/analytics/financial-summary", { params: { period } });
-  return res.data.summary;
-}
-
-export async function fetchBestSellers() {
-  const res = await api.get("/analytics/best-sellers");
-  return res.data.bestSellers;
-}
-
-export async function fetchSalesTrends() {
-  const res = await api.get("/analytics/sales-trend");
-  return res.data.trends;
-}
+export const fetchExpenses = (category) => api.get("/expenses", { params: category ? { category } : {} }).then((r) => r.data.expenses);
+export const createExpense = (data) => api.post("/expenses", data).then((r) => r.data.expense);
+export const deleteExpense = (id) => api.delete(`/expenses/${id}`).then((r) => r.data);
 
 export { api };
 export default api;

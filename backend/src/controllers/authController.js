@@ -19,65 +19,23 @@ function generateToken(user) {
  */
 export async function pinLogin(req, res) {
   try {
-    const { pin, role, userId } = req.body;
+    const { pin } = req.body;
+    const user = await User.findOne({ pin, isActive: true });
 
-    if (!pin || typeof pin !== 'string' || pin.trim().length !== 4) {
-      return res.status(400).json({
-        success: false,
-        message: 'A valid 4-digit PIN is required'
-      });
+    if (!user) {
+      throw new Error('Invalid staff PIN. Please try again.');
     }
 
-    let matchedUser = null;
-
-    if (userId) {
-      const user = await User.findOne({ _id: userId, isActive: true });
-      if (user && (await user.matchPin(pin))) {
-        matchedUser = user;
-      }
-    } else if (role) {
-      const usersInRole = await User.find({ role, isActive: true });
-      for (const user of usersInRole) {
-        if (await user.matchPin(pin)) {
-          matchedUser = user;
-          break;
-        }
-      }
-    } else {
-      // Direct PIN entry on numeric keypad: match against active staff
-      const activeStaff = await User.find({ isActive: true });
-      for (const user of activeStaff) {
-        if (await user.matchPin(pin)) {
-          matchedUser = user;
-          break;
-        }
-      }
-    }
-
-    if (!matchedUser) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid staff PIN. Please try again.'
-      });
-    }
-
-    const token = generateToken(matchedUser);
-
-    res.status(200).json({
+    return res.json({
       success: true,
-      message: `Welcome back, ${matchedUser.name}!`,
-      token,
-      user: {
-        id: matchedUser._id,
-        name: matchedUser.name,
-        role: matchedUser.role
-      }
+      message: `Welcome back, ${user.name}!`,
+      token: generateToken(user),
+      user: { id: user._id, name: user.name, role: user.role }
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(401).json({
       success: false,
-      message: 'Server error during PIN authentication',
-      error: error.message
+      message: error.message || 'Invalid staff PIN. Please try again.'
     });
   }
 }
@@ -91,7 +49,11 @@ export async function getMe(req, res) {
   try {
     res.status(200).json({
       success: true,
-      user: req.user
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        role: req.user.role
+      }
     });
   } catch (error) {
     res.status(500).json({
@@ -101,3 +63,68 @@ export async function getMe(req, res) {
     });
   }
 }
+
+/**
+ * @description Get all staff members for management and settings
+ * @route GET /api/auth/staff
+ * @access Protected (Manager)
+ */
+export async function getAllStaff(req, res) {
+  try {
+    const staff = await User.find({}).select('-__v');
+    res.status(200).json({
+      success: true,
+      count: staff.length,
+      staff: staff.map((s) => ({
+        id: s._id,
+        name: s.name,
+        role: s.role,
+        pin: s.pin,
+        isActive: s.isActive,
+        createdAt: s.createdAt
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve staff directory',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * @description Update a staff member's 4-digit PIN in MongoDB
+ * @route PATCH /api/auth/staff/:id/pin
+ * @access Protected (Manager)
+ */
+export async function updateStaffPin(req, res) {
+  try {
+    const { id } = req.params;
+    const { pin } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Staff member not found'
+      });
+    }
+
+    user.pin = pin;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `PIN for ${user.name} updated to ${pin}`,
+      pin
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update staff PIN',
+      error: error.message
+    });
+  }
+}
+

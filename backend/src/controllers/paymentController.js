@@ -44,10 +44,11 @@ export async function initializePayment(req, res) {
           callback_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/payment-callback`,
           return_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/cashier?tx_ref=${txRef}`,
           customization: {
-            title: `Ice Cream Order ${order.orderNumber}`,
-            description: `Payment for Order ${order.orderNumber}`
+            title: 'Campus Scoop',
+            description: `Order ${cleanOrderNum}`
           },
-          email: 'customer@icecreamrms.com',
+          email: req.body?.email || 'customer@gmail.com',
+          phone_number: req.body?.phone_number || '0911223344',
           first_name: 'Walk-in',
           last_name: 'Customer'
         },
@@ -62,11 +63,18 @@ export async function initializePayment(req, res) {
       if (chapaRes.data && chapaRes.data.status === 'success') {
         checkoutUrl = chapaRes.data.data.checkout_url;
         rawResponse = chapaRes.data;
+        console.log(`Chapa live checkout generated for ${order.orderNumber}:`, checkoutUrl);
       }
     } catch (chapaError) {
-      console.warn('Chapa API call failed or timed out. Falling back to local simulation URL for defense presentation:', chapaError.message);
+      console.warn(
+        'Chapa API call issue:',
+        chapaError.response?.data || chapaError.message
+      );
       checkoutUrl = `https://checkout.chapa.co/checkout/test-payment/${txRef}`;
-      rawResponse = { note: 'Defense test fallback', error: chapaError.message };
+      rawResponse = {
+        note: 'Defense test fallback',
+        error: chapaError.response?.data || chapaError.message
+      };
     }
 
     // Generate scannable QR Code as Data URI for instant display on Cashier screen
