@@ -12,7 +12,7 @@ export const CartSidebar = ({
   onSubmitOrder
 }) => {
   const subtotal = cartItems.reduce((acc, item) => acc + item.totalItemPrice, 0);
-  const tax = Math.round(subtotal * 0.05);
+  const tax = Math.round(subtotal * 0.15);
   const total = subtotal + tax;
 
   return (
@@ -85,7 +85,7 @@ export const CartSidebar = ({
             </span>
           </div>
           <div className="flex items-center justify-between text-[#78716C]">
-            <span>Campus VAT (5%)</span>
+            <span>Campus VAT (15%)</span>
             <span className="font-mono font-semibold text-[#5A3E36]">
               {tax} ETB
             </span>

@@ -150,7 +150,7 @@ export const ReceiptModal = ({ order, onClose }) => {
                 <span>{order.subtotal}.00 ETB</span>
               </div>
               <div className="flex justify-between text-stone-600">
-                <span>VAT (5%):</span>
+                <span>VAT (15%):</span>
                 <span>{order.tax}.00 ETB</span>
               </div>
               <div className="flex justify-between text-sm font-black text-black pt-1 border-t border-stone-300">

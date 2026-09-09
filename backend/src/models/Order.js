@@ -56,11 +56,23 @@ const orderSchema = new mongoose.Schema(
     },
 
     items: [orderItemSchema], //1 to * relationship represenation.aingle order has many items(iceCreams)
-    // Total order price in ETB
+    subtotal: {
+      type: Number,
+      default: 0
+    },
+    tax: {
+      type: Number,
+      default: 0
+    },
+    // Total order price in ETB (includes 15% VAT)
     totalAmount: {
       type: Number,
       required: true,
       min: 0
+    },
+    customerNote: {
+      type: String,
+      default: ''
     },
     // Order lifecycle status
     status: {

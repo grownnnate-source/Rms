@@ -25,7 +25,7 @@ async function generateNextOrderNumber() {
  */
 export async function createOrder(req, res) {
   try {
-    const { items } = req.body;
+    const { items, note } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -35,12 +35,12 @@ export async function createOrder(req, res) {
     }
 
     // Calculate item totals and snapshot unit prices
-    let totalAmount = 0;
+    let subtotal = 0;
     const formattedItems = items.map((item) => {
       const quantity = Number(item.quantity) || 1;
       const unitPrice = Number(item.unitPrice) || 0;
       const itemTotal = unitPrice * quantity;
-      totalAmount += itemTotal;
+      subtotal += itemTotal;
 
       return {
         product: item.product,
@@ -58,13 +58,20 @@ export async function createOrder(req, res) {
       };
     });
 
+    // 15% VAT calculation
+    const tax = Math.round(subtotal * 0.15);
+    const totalAmount = subtotal + tax;
+
     const orderNumber = await generateNextOrderNumber();
 
     const newOrder = await Order.create({
       orderNumber,
       attendant: req.user._id,
       items: formattedItems,
+      subtotal,
+      tax,
       totalAmount,
+      customerNote: typeof note === 'string' ? note.trim() : '',
       status: 'CREATED'
     });
 

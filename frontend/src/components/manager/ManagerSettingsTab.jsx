@@ -134,7 +134,7 @@ export const ManagerSettingsTab = ({
           <div className="p-3 rounded-xl bg-[#FFF9F2] border border-[#5A3E36]/10">
             <span className="text-stone-500">Student Campus VAT</span>
             <div className="font-bold text-sm text-[#5A3E36] mt-0.5">
-              5.0% flat
+              15.0% flat
             </div>
           </div>
           <div className="p-3 rounded-xl bg-[#FFF9F2] border border-[#5A3E36]/10">

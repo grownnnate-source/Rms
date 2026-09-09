@@ -62,8 +62,8 @@ export async function createProduct(productData) {
 }
 
 // Orders
-export async function createOrder(items) {
-  const res = await api.post("/orders", { items });
+export async function createOrder(items, note = "") {
+  const res = await api.post("/orders", { items, note });
   return res.data.order;
 }
 

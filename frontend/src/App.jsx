@@ -75,15 +75,16 @@ function normalizeProduct(p) {
 }
 
 function normalizeOrder(o) {
+  if (!o) return null;
   const numericOrderNum = typeof o.orderNumber === "string"
     ? parseInt(o.orderNumber.replace(/[^0-9]/g, ""), 10) || 101
-    : (o.orderNumber || 101);
+    : (Number(o.orderNumber) || 101);
 
   const rawStatus = o.status || "PENDING";
   const status = rawStatus === "CREATED" || rawStatus === "PAYMENT_PENDING" ? "PENDING" : rawStatus;
 
   const items = (o.items || []).map((i) => ({
-    id: i._id || i.id || `item-${Math.random().toString(36).substring(2, 6)}`,
+    id: String(i._id || i.id || `item-${Math.random().toString(36).substring(2, 6)}`),
     productId: i.product || i.productId,
     name: i.name,
     category: i.category || "ice_cream",
@@ -96,7 +97,8 @@ function normalizeOrder(o) {
   }));
 
   const total = Number(o.totalAmount || o.total) || 0;
-  const subtotal = o.subtotal ? Number(o.subtotal) : Math.round(total / 1.05);
+  // 15% VAT calculation
+  const subtotal = o.subtotal ? Number(o.subtotal) : Math.round(total / 1.15);
   const tax = o.tax ? Number(o.tax) : total - subtotal;
 
   let createdAt = new Date().toISOString().replace("T", " ").slice(0, 16);
@@ -108,8 +110,10 @@ function normalizeOrder(o) {
     }
   }
 
+  const orderId = String(o._id || o.id || `ord-${numericOrderNum}`);
+
   return {
-    id: o._id || o.id,
+    id: orderId,
     orderNumber: numericOrderNum,
     createdAt,
     serverName: o.attendant?.name || o.serverName || "Abebe Tadesse (Server)",
@@ -119,9 +123,32 @@ function normalizeOrder(o) {
     subtotal,
     tax,
     total,
+    paymentMethod: o.payment?.paymentMethod || o.paymentMethod || "CHAPA_QR",
     chapaTxRef: o.payment?.txRef || o.chapaTxRef || `RMS-${numericOrderNum}-${Date.now()}`,
-    note: o.note || ""
+    customerNote: o.customerNote || o.note || ""
   };
+}
+
+function upsertOrder(prevOrders, rawNewOrder) {
+  const normalized = normalizeOrder(rawNewOrder);
+  if (!normalized) return prevOrders;
+
+  const targetId = String(normalized.id || "");
+  const targetNum = Number(normalized.orderNumber) || 0;
+
+  const existsIndex = prevOrders.findIndex((o) => {
+    const oId = String(o.id || "");
+    const oNum = Number(o.orderNumber) || 0;
+    return (targetId && oId === targetId) || (targetNum > 0 && oNum === targetNum);
+  });
+
+  if (existsIndex >= 0) {
+    const copy = [...prevOrders];
+    copy[existsIndex] = { ...copy[existsIndex], ...normalized };
+    return copy;
+  }
+
+  return [normalized, ...prevOrders];
 }
 
 export default function App() {
@@ -197,7 +224,13 @@ export default function App() {
       try {
         const liveOrders = await apiFetchOrders();
         if (isSubscribed && Array.isArray(liveOrders) && liveOrders.length > 0) {
-          setOrders(liveOrders.map(normalizeOrder));
+          setOrders((prev) => {
+            let merged = [...prev];
+            liveOrders.forEach((lo) => {
+              merged = upsertOrder(merged, lo);
+            });
+            return merged;
+          });
         }
       } catch (err) {
         console.warn("Live orders fetch fallback:", err.message);
@@ -208,19 +241,13 @@ export default function App() {
 
     // Socket.IO Real-Time Listeners
     socket.on("order:created", (newBackendOrder) => {
-      const normalized = normalizeOrder(newBackendOrder);
-      setOrders((prev) => {
-        if (prev.some((o) => o.id === normalized.id || o.orderNumber === normalized.orderNumber)) {
-          return prev;
-        }
-        return [normalized, ...prev];
-      });
+      setOrders((prev) => upsertOrder(prev, newBackendOrder));
     });
 
     socket.on("order:paid", ({ orderId }) => {
       setOrders((prev) =>
         prev.map((o) =>
-          o.id === orderId
+          String(o.id) === String(orderId)
             ? { ...o, status: "PAID", paidAt: new Date().toTimeString().slice(0, 5) }
             : o
         )
@@ -228,10 +255,7 @@ export default function App() {
     });
 
     socket.on("order:updated", (updatedBackendOrder) => {
-      const normalized = normalizeOrder(updatedBackendOrder);
-      setOrders((prev) =>
-        prev.map((o) => (o.id === normalized.id ? normalized : o))
-      );
+      setOrders((prev) => upsertOrder(prev, updatedBackendOrder));
     });
 
     return () => {
@@ -327,10 +351,10 @@ export default function App() {
     });
 
     try {
-      const createdOrder = await apiCreateOrder(formattedItems);
+      const createdOrder = await apiCreateOrder(formattedItems, note);
       if (createdOrder) {
         const normalized = normalizeOrder(createdOrder);
-        setOrders((prev) => [normalized, ...prev]);
+        setOrders((prev) => upsertOrder(prev, normalized));
         setCurrentOrderItems([]);
         return normalized;
       }
@@ -340,7 +364,7 @@ export default function App() {
 
     // Local fallback if backend temporarily unreachable
     const subtotal = currentOrderItems.reduce((sum, item) => sum + item.totalItemPrice, 0);
-    const tax = Math.round(subtotal * 0.05);
+    const tax = Math.round(subtotal * 0.15);
     const total = subtotal + tax;
     const now = new Date();
     const formattedDate = `${now.toISOString().split("T")[0]} ${now.toTimeString().split(" ")[0].slice(0, 5)}`;
@@ -356,11 +380,12 @@ export default function App() {
       subtotal,
       tax,
       total,
+      paymentMethod: "CHAPA_QR",
       chapaTxRef: `RMS-${nextOrderNumber}-${Date.now()}`,
-      note: note.trim()
+      customerNote: note.trim()
     };
 
-    setOrders((prev) => [fallbackOrder, ...prev]);
+    setOrders((prev) => upsertOrder(prev, fallbackOrder));
     setCurrentOrderItems([]);
     return fallbackOrder;
   };
@@ -504,7 +529,7 @@ export default function App() {
     ];
 
     const subtotal = (products[0]?.price || 250) + 70;
-    const tax = Math.round(subtotal * 0.05);
+    const tax = Math.round(subtotal * 0.15);
     const total = subtotal + tax;
 
     const newOrder = {
@@ -517,11 +542,12 @@ export default function App() {
       subtotal,
       tax,
       total,
+      paymentMethod: "CHAPA_QR",
       chapaTxRef: `RMS-${nextOrderNumber}-${Date.now()}`,
-      note: "Sample Demo Order"
+      customerNote: "Sample Demo Order"
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
+    setOrders((prev) => upsertOrder(prev, newOrder));
   };
 
   const pendingOrdersCount = orders.filter((o) => o.status === "PENDING").length;
