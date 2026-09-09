@@ -16,9 +16,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const isOriginAllowed = (origin, callback) => callback(null, origin || true);
+
 export const io = new SocketIOServer({
   cors: {
-    origin: process.env.CLIENT_URL || '*',
+    origin: isOriginAllowed,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true
   }
@@ -37,7 +39,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }));
+app.use(cors({ origin: isOriginAllowed, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

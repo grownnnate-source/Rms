@@ -1,6 +1,8 @@
 # Campus Scoop POS - Staff Terminal Credentials & PIN Directory
 
-This document contains the official 4-digit terminal access PINs for the seeded staff accounts in MongoDB Atlas.
+**Live Production URLs**:
+* **Frontend (Vercel)**: [https://rms-chi-dusky.vercel.app](https://rms-chi-dusky.vercel.app)
+* **Backend (Render)**: [https://ice-cream-shop-management.onrender.com](https://ice-cream-shop-management.onrender.com)
 
 ---
 
