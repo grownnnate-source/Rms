@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Routes, Route } from "react-router";
+import { Routes, Route, useLocation } from "react-router";
 import {
   loginWithPin,
   fetchProducts as apiFetchProducts,
@@ -130,6 +130,40 @@ export default function App() {
   const [staff, setStaff] = useState(STAFF_MEMBERS);
   const [currentOrderItems, setCurrentOrderItems] = useState([]);
   const [isLiveBackend, setIsLiveBackend] = useState(false);
+  const location = useLocation();
+
+  // Role Authentication Synchronization across routes
+  useEffect(() => {
+    async function syncRoleAuth() {
+      const path = location.pathname;
+      let targetPin = "1111";
+      let targetRole = "attendant";
+
+      if (path === "/cashier") {
+        targetPin = "2222";
+        targetRole = "cashier";
+      } else if (path === "/manager") {
+        targetPin = "9999";
+        targetRole = "manager";
+      }
+
+      try {
+        await loginWithPin(targetPin, targetRole);
+        setIsLiveBackend(true);
+
+        if (path === "/manager") {
+          const liveExpenses = await apiFetchExpenses();
+          if (Array.isArray(liveExpenses) && liveExpenses.length > 0) {
+            setExpenses(liveExpenses);
+          }
+        }
+      } catch (e) {
+        console.warn(`Role auth sync for ${targetRole} fallback:`, e.message);
+      }
+    }
+
+    syncRoleAuth();
+  }, [location.pathname]);
 
   // Initialize Session, Connect to Live Backend & MongoDB Atlas
   useEffect(() => {
@@ -500,7 +534,18 @@ export default function App() {
   };
 
   const pendingOrdersCount = orders.filter((o) => o.status === "PENDING").length;
-  const activeStaffName = isLiveBackend ? "Abebe Tadesse (Connected)" : "Abebe Tadesse (Server)";
+
+  const getActiveStaffName = () => {
+    if (location.pathname === "/cashier") {
+      return isLiveBackend ? "Sara Hailu (Cashier • Live)" : "Sara Hailu (Cashier)";
+    }
+    if (location.pathname === "/manager") {
+      return isLiveBackend ? "Dawit Bekele (Manager • Live)" : "Dawit Bekele (Manager)";
+    }
+    return isLiveBackend ? "Abebe Tadesse (Attendant • Live)" : "Abebe Tadesse (Server)";
+  };
+
+  const activeStaffName = getActiveStaffName();
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FFF9F2] text-[#292524] font-sans antialiased selection:bg-[#E85D75] selection:text-white">
